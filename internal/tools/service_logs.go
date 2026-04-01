@@ -33,8 +33,11 @@ func NewGetServiceLogs(c *client.Client) (mcp.Tool, server.ToolHandlerFunc) {
 		if v, ok := req.GetArguments()["lines"].(float64); ok && v > 0 {
 			lines = int(v)
 		}
+		if lines > 1000 {
+			lines = 1000
+		}
 
-		resp, err := c.GetServiceLogs(slug, lines)
+		resp, err := c.GetServiceLogs(ctx, slug, lines)
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}

@@ -40,7 +40,7 @@ func NewDeployService(c *client.Client) (mcp.Tool, server.ToolHandlerFunc) {
 			body, _ = json.Marshal(map[string]any{"env": envMap})
 		}
 
-		resp, err := c.DeployService(slug, body)
+		resp, err := c.DeployService(ctx, slug, body)
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}

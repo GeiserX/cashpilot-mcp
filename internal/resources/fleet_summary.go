@@ -18,7 +18,7 @@ func RegisterFleetSummary(s *server.MCPServer, c *client.Client) {
 	)
 
 	s.AddResource(res, func(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
-		body, err := c.GetFleetSummary()
+		body, err := c.GetFleetSummary(ctx)
 		if err != nil {
 			return nil, err
 		}

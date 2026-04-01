@@ -26,7 +26,7 @@ func NewRemoveService(c *client.Client) (mcp.Tool, server.ToolHandlerFunc) {
 			return mcp.NewToolResultError(err.Error()), nil
 		}
 
-		resp, err := c.RemoveService(slug)
+		resp, err := c.RemoveService(ctx, slug)
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}

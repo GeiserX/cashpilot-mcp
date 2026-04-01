@@ -18,7 +18,7 @@ func RegisterEarningsSummary(s *server.MCPServer, c *client.Client) {
 	)
 
 	s.AddResource(res, func(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
-		body, err := c.GetEarningsSummary()
+		body, err := c.GetEarningsSummary(ctx)
 		if err != nil {
 			return nil, err
 		}

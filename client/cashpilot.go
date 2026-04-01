@@ -2,6 +2,7 @@ package client
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -48,114 +49,118 @@ func (c *Client) do(req *http.Request) ([]byte, error) {
 	return io.ReadAll(resp.Body)
 }
 
+func (c *Client) doGet(ctx context.Context, path string, q url.Values) ([]byte, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", c.buildURL(path, q), nil)
+	if err != nil {
+		return nil, err
+	}
+	return c.do(req)
+}
+
+func (c *Client) doPost(ctx context.Context, path string, body io.Reader) ([]byte, error) {
+	req, err := http.NewRequestWithContext(ctx, "POST", c.buildURL(path, nil), body)
+	if err != nil {
+		return nil, err
+	}
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	return c.do(req)
+}
+
 // ---------------------------------------------------------------------------
 // Resource methods (GET, no params)
 // ---------------------------------------------------------------------------
 
-func (c *Client) GetEarningsSummary() ([]byte, error) {
-	req, _ := http.NewRequest("GET", c.buildURL("/api/earnings/summary", nil), nil)
-	return c.do(req)
+func (c *Client) GetEarningsSummary(ctx context.Context) ([]byte, error) {
+	return c.doGet(ctx, "/api/earnings/summary", nil)
 }
 
-func (c *Client) GetEarningsBreakdown() ([]byte, error) {
-	req, _ := http.NewRequest("GET", c.buildURL("/api/earnings/breakdown", nil), nil)
-	return c.do(req)
+func (c *Client) GetEarningsBreakdown(ctx context.Context) ([]byte, error) {
+	return c.doGet(ctx, "/api/earnings/breakdown", nil)
 }
 
-func (c *Client) GetServicesDeployed() ([]byte, error) {
-	req, _ := http.NewRequest("GET", c.buildURL("/api/services/deployed", nil), nil)
-	return c.do(req)
+func (c *Client) GetServicesDeployed(ctx context.Context) ([]byte, error) {
+	return c.doGet(ctx, "/api/services/deployed", nil)
 }
 
-func (c *Client) GetServicesCatalog() ([]byte, error) {
-	req, _ := http.NewRequest("GET", c.buildURL("/api/services", nil), nil)
-	return c.do(req)
+func (c *Client) GetServicesCatalog(ctx context.Context) ([]byte, error) {
+	return c.doGet(ctx, "/api/services", nil)
 }
 
-func (c *Client) GetFleetSummary() ([]byte, error) {
-	req, _ := http.NewRequest("GET", c.buildURL("/api/fleet/summary", nil), nil)
-	return c.do(req)
+func (c *Client) GetFleetSummary(ctx context.Context) ([]byte, error) {
+	return c.doGet(ctx, "/api/fleet/summary", nil)
 }
 
-func (c *Client) GetWorkers() ([]byte, error) {
-	req, _ := http.NewRequest("GET", c.buildURL("/api/workers", nil), nil)
-	return c.do(req)
+func (c *Client) GetWorkers(ctx context.Context) ([]byte, error) {
+	return c.doGet(ctx, "/api/workers", nil)
 }
 
-func (c *Client) GetHealthScores() ([]byte, error) {
-	req, _ := http.NewRequest("GET", c.buildURL("/api/health/scores", nil), nil)
-	return c.do(req)
+func (c *Client) GetHealthScores(ctx context.Context) ([]byte, error) {
+	return c.doGet(ctx, "/api/health/scores", nil)
 }
 
-func (c *Client) GetCollectorAlerts() ([]byte, error) {
-	req, _ := http.NewRequest("GET", c.buildURL("/api/collector-alerts", nil), nil)
-	return c.do(req)
+func (c *Client) GetCollectorAlerts(ctx context.Context) ([]byte, error) {
+	return c.doGet(ctx, "/api/collector-alerts", nil)
 }
 
 // ---------------------------------------------------------------------------
 // Tool methods (GET with params, POST, DELETE)
 // ---------------------------------------------------------------------------
 
-func (c *Client) GetEarningsDaily(days int) ([]byte, error) {
+func (c *Client) GetEarningsDaily(ctx context.Context, days int) ([]byte, error) {
 	q := url.Values{}
 	q.Set("days", fmt.Sprintf("%d", days))
-	req, _ := http.NewRequest("GET", c.buildURL("/api/earnings/daily", q), nil)
-	return c.do(req)
+	return c.doGet(ctx, "/api/earnings/daily", q)
 }
 
-func (c *Client) GetEarningsHistory(period string) ([]byte, error) {
+func (c *Client) GetEarningsHistory(ctx context.Context, period string) ([]byte, error) {
 	q := url.Values{}
 	q.Set("period", period)
-	req, _ := http.NewRequest("GET", c.buildURL("/api/earnings/history", q), nil)
-	return c.do(req)
+	return c.doGet(ctx, "/api/earnings/history", q)
 }
 
-func (c *Client) GetServiceLogs(slug string, lines int) ([]byte, error) {
+func (c *Client) GetServiceLogs(ctx context.Context, slug string, lines int) ([]byte, error) {
 	q := url.Values{}
 	q.Set("lines", fmt.Sprintf("%d", lines))
 	path := fmt.Sprintf("/api/services/%s/logs", url.PathEscape(slug))
-	req, _ := http.NewRequest("GET", c.buildURL(path, q), nil)
-	return c.do(req)
+	return c.doGet(ctx, path, q)
 }
 
-func (c *Client) RestartService(slug string) ([]byte, error) {
+func (c *Client) RestartService(ctx context.Context, slug string) ([]byte, error) {
 	path := fmt.Sprintf("/api/services/%s/restart", url.PathEscape(slug))
-	req, _ := http.NewRequest("POST", c.buildURL(path, nil), nil)
-	return c.do(req)
+	return c.doPost(ctx, path, nil)
 }
 
-func (c *Client) StopService(slug string) ([]byte, error) {
+func (c *Client) StopService(ctx context.Context, slug string) ([]byte, error) {
 	path := fmt.Sprintf("/api/services/%s/stop", url.PathEscape(slug))
-	req, _ := http.NewRequest("POST", c.buildURL(path, nil), nil)
-	return c.do(req)
+	return c.doPost(ctx, path, nil)
 }
 
-func (c *Client) StartService(slug string) ([]byte, error) {
+func (c *Client) StartService(ctx context.Context, slug string) ([]byte, error) {
 	path := fmt.Sprintf("/api/services/%s/start", url.PathEscape(slug))
-	req, _ := http.NewRequest("POST", c.buildURL(path, nil), nil)
-	return c.do(req)
+	return c.doPost(ctx, path, nil)
 }
 
-func (c *Client) DeployService(slug string, body []byte) ([]byte, error) {
+func (c *Client) DeployService(ctx context.Context, slug string, body []byte) ([]byte, error) {
 	path := fmt.Sprintf("/api/deploy/%s", url.PathEscape(slug))
-	req, _ := http.NewRequest("POST", c.buildURL(path, nil), bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-	return c.do(req)
+	return c.doPost(ctx, path, bytes.NewReader(body))
 }
 
-func (c *Client) RemoveService(slug string) ([]byte, error) {
+func (c *Client) RemoveService(ctx context.Context, slug string) ([]byte, error) {
 	path := fmt.Sprintf("/api/services/%s", url.PathEscape(slug))
-	req, _ := http.NewRequest("DELETE", c.buildURL(path, nil), nil)
+	req, err := http.NewRequestWithContext(ctx, "DELETE", c.buildURL(path, nil), nil)
+	if err != nil {
+		return nil, err
+	}
 	return c.do(req)
 }
 
-func (c *Client) TriggerCollection() ([]byte, error) {
-	req, _ := http.NewRequest("POST", c.buildURL("/api/collect", nil), nil)
-	return c.do(req)
+func (c *Client) TriggerCollection(ctx context.Context) ([]byte, error) {
+	return c.doPost(ctx, "/api/collect", nil)
 }
 
-func (c *Client) GetCompose(slug string) ([]byte, error) {
+func (c *Client) GetCompose(ctx context.Context, slug string) ([]byte, error) {
 	path := fmt.Sprintf("/api/compose/%s", url.PathEscape(slug))
-	req, _ := http.NewRequest("GET", c.buildURL(path, nil), nil)
-	return c.do(req)
+	return c.doGet(ctx, path, nil)
 }

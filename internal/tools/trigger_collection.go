@@ -17,7 +17,7 @@ func NewTriggerCollection(c *client.Client) (mcp.Tool, server.ToolHandlerFunc) {
 	)
 
 	handler := func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		resp, err := c.TriggerCollection()
+		resp, err := c.TriggerCollection(ctx)
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}

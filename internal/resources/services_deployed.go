@@ -18,7 +18,7 @@ func RegisterServicesDeployed(s *server.MCPServer, c *client.Client) {
 	)
 
 	s.AddResource(res, func(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
-		body, err := c.GetServicesDeployed()
+		body, err := c.GetServicesDeployed(ctx)
 		if err != nil {
 			return nil, err
 		}

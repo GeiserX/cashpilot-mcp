@@ -28,7 +28,7 @@ func NewGetEarningsDaily(c *client.Client) (mcp.Tool, server.ToolHandlerFunc) {
 			}
 		}
 
-		resp, err := c.GetEarningsDaily(days)
+		resp, err := c.GetEarningsDaily(ctx, days)
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}

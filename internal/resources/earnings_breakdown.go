@@ -18,7 +18,7 @@ func RegisterEarningsBreakdown(s *server.MCPServer, c *client.Client) {
 	)
 
 	s.AddResource(res, func(ctx context.Context, req mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
-		body, err := c.GetEarningsBreakdown()
+		body, err := c.GetEarningsBreakdown(ctx)
 		if err != nil {
 			return nil, err
 		}

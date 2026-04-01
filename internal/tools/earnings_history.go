@@ -26,7 +26,7 @@ func NewGetEarningsHistory(c *client.Client) (mcp.Tool, server.ToolHandlerFunc) 
 			return mcp.NewToolResultError(err.Error()), nil
 		}
 
-		resp, err := c.GetEarningsHistory(period)
+		resp, err := c.GetEarningsHistory(ctx, period)
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}

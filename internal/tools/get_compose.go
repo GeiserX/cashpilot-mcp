@@ -26,7 +26,7 @@ func NewGetCompose(c *client.Client) (mcp.Tool, server.ToolHandlerFunc) {
 			return mcp.NewToolResultError(err.Error()), nil
 		}
 
-		resp, err := c.GetCompose(slug)
+		resp, err := c.GetCompose(ctx, slug)
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}
