@@ -24,7 +24,7 @@ func main() {
 	// Create MCP server
 	s := server.NewMCPServer(
 		"CashPilot MCP Bridge",
-		"0.0.1",
+		version.Version,
 		server.WithToolCapabilities(true),
 		server.WithRecovery(),
 	)
@@ -110,8 +110,8 @@ func main() {
 		}
 	} else {
 		httpSrv := server.NewStreamableHTTPServer(s)
-		log.Println("CashPilot MCP bridge listening on :8080")
-		if err := httpSrv.Start(":8080"); err != nil {
+		log.Println("CashPilot MCP bridge listening on :8081")
+		if err := httpSrv.Start(":8081"); err != nil {
 			log.Fatalf("server error: %v", err)
 		}
 	}

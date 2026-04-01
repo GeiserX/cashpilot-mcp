@@ -6,6 +6,8 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
+	"time"
 )
 
 type Client struct {
@@ -16,17 +18,18 @@ type Client struct {
 
 func NewClient(base, apiKey string) *Client {
 	return &Client{
-		base:   base,
-		hc:     &http.Client{},
+		base:   strings.TrimRight(base, "/"),
+		hc:     &http.Client{Timeout: 30 * time.Second},
 		apiKey: apiKey,
 	}
 }
 
 func (c *Client) buildURL(path string, q url.Values) string {
-	u, _ := url.Parse(c.base)
-	u.Path = path
-	u.RawQuery = q.Encode()
-	return u.String()
+	u := c.base + path
+	if q != nil && len(q) > 0 {
+		u += "?" + q.Encode()
+	}
+	return u
 }
 
 func (c *Client) do(req *http.Request) ([]byte, error) {

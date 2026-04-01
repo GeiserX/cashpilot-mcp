@@ -18,7 +18,7 @@ type CashPilotConfig struct {
 
 func LoadCashPilotConfig() CashPilotConfig {
 	return CashPilotConfig{
-		BaseURL: getEnv("CASHPILOT_URL", "http://localhost:8080"),
+		BaseURL: getEnv("CASHPILOT_URL", "http://localhost:8080"),  // NOTE: MCP HTTP listens on :8081 to avoid conflict
 		APIKey:  getEnv("CASHPILOT_API_KEY", ""),
 	}
 }
