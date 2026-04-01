@@ -37,7 +37,10 @@ func NewDeployService(c *client.Client) (mcp.Tool, server.ToolHandlerFunc) {
 			if err := json.Unmarshal([]byte(envStr), &envMap); err != nil {
 				return mcp.NewToolResultError(fmt.Sprintf("invalid env JSON: %v", err)), nil
 			}
-			body, _ = json.Marshal(map[string]any{"env": envMap})
+			body, err = json.Marshal(map[string]any{"env": envMap})
+			if err != nil {
+				return mcp.NewToolResultError(fmt.Sprintf("marshal deploy body: %v", err)), nil
+			}
 		}
 
 		resp, err := c.DeployService(ctx, slug, body)
