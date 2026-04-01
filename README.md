@@ -31,11 +31,13 @@ services:
   cashpilot-mcp:
     image: drumsergio/cashpilot-mcp:latest
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8081:8081"
     environment:
       - CASHPILOT_URL=http://cashpilot:8080
       - CASHPILOT_API_KEY=your-admin-api-key
 ```
+
+> **Security note:** The HTTP transport listens on `127.0.0.1:8081` by default. If you need to expose it on a network, place it behind a reverse proxy with authentication.
 
 ## Install via npm (stdio transport)
 
@@ -50,7 +52,7 @@ npm install -g cashpilot-mcp
 cashpilot-mcp
 ```
 
-This downloads the pre-built Go binary for your platform and runs it with stdio transport, compatible with any MCP client.
+This downloads the pre-built Go binary from GitHub Releases for your platform and runs it with stdio transport. Requires at least one [published release](https://github.com/GeiserX/cashpilot-mcp/releases).
 
 ## Local build
 
@@ -70,6 +72,7 @@ go run ./cmd/server
 |--------------------|----------------------------|--------------------------------------------------|
 | `CASHPILOT_URL`    | `http://localhost:8080`    | CashPilot instance URL (without trailing /)      |
 | `CASHPILOT_API_KEY`| _(required)_               | Admin API key for authentication                 |
+| `LISTEN_ADDR`      | `127.0.0.1:8081`           | HTTP listen address (Docker sets `0.0.0.0:8081`) |
 | `TRANSPORT`        | _(empty = HTTP)_           | Set to `stdio` for stdio transport               |
 
 Put them in a `.env` file (from `.env.example`) or set them in the environment.
@@ -90,11 +93,10 @@ Tested with [Inspector](https://modelcontextprotocol.io/docs/tools/inspector) an
   "auth": { "type": "none" },
   "api": {
     "type": "jsonrpc-mcp",
-    "url":  "http://localhost:8080/mcp",
+    "url":  "http://localhost:8081/mcp",
     "init_method": "initialize",
     "session_header": "Mcp-Session-Id"
   },
-  "logo_url": "https://raw.githubusercontent.com/GeiserX/cashpilot-mcp/main/docs/images/logo.png",
   "contact_email": "acsdesk@protonmail.com",
   "legal_info_url": "https://github.com/GeiserX/cashpilot-mcp/blob/main/LICENSE"
 }

@@ -110,8 +110,12 @@ func main() {
 		}
 	} else {
 		httpSrv := server.NewStreamableHTTPServer(s)
-		log.Println("CashPilot MCP bridge listening on :8081")
-		if err := httpSrv.Start(":8081"); err != nil {
+		addr := os.Getenv("LISTEN_ADDR")
+		if addr == "" {
+			addr = "127.0.0.1:8081"
+		}
+		log.Printf("CashPilot MCP bridge listening on %s", addr)
+		if err := httpSrv.Start(addr); err != nil {
 			log.Fatalf("server error: %v", err)
 		}
 	}
