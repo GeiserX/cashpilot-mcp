@@ -119,3 +119,11 @@ Tested with [Inspector](https://modelcontextprotocol.io/docs/tools/inspector) an
 Feel free to dive in! [Open an issue](https://github.com/GeiserX/cashpilot-mcp/issues/new) or submit PRs.
 
 CashPilot-MCP follows the [Contributor Covenant](http://contributor-covenant.org/version/2/1/) Code of Conduct.
+
+## Other MCP Servers by GeiserX
+
+- [duplicacy-mcp](https://github.com/GeiserX/duplicacy-mcp) — Backup health monitoring
+- [genieacs-mcp](https://github.com/GeiserX/genieacs-mcp) — TR-069 device management
+- [lynxprompt-mcp](https://github.com/GeiserX/lynxprompt-mcp) — AI configuration blueprints
+- [pumperly-mcp](https://github.com/GeiserX/pumperly-mcp) — Fuel and EV charging prices
+- [telegram-archive-mcp](https://github.com/GeiserX/telegram-archive-mcp) — Telegram message archive
