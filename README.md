@@ -7,6 +7,9 @@
   <a href="https://github.com/GeiserX/cashpilot-mcp/stargazers"><img src="https://img.shields.io/github/stars/GeiserX/cashpilot-mcp?style=flat-square&logo=github" alt="GitHub Stars"/></a>
   <a href="https://github.com/GeiserX/cashpilot-mcp/blob/main/LICENSE"><img src="https://img.shields.io/github/license/GeiserX/cashpilot-mcp?style=flat-square" alt="License"/></a>
 </p>
+<p align="center">
+  <a href="https://glama.ai/mcp/servers/GeiserX/cashpilot-mcp"><img src="https://glama.ai/mcp/servers/GeiserX/cashpilot-mcp/badges/score.svg" alt="Glama MCP Server" /></a>
+</p>
 
 <p align="center"><strong>A tiny bridge that exposes any CashPilot instance as an MCP server, enabling LLMs to monitor passive income earnings, manage services, and control fleet workers.</strong></p>
 

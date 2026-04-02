@@ -1,0 +1,59 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.GeiserX/cashpilot-mcp",
+  "description": "MCP server for CashPilot — monitor passive income, bandwidth sharing, and DePIN earnings",
+  "repository": {
+    "url": "https://github.com/GeiserX/cashpilot-mcp",
+    "source": "github"
+  },
+  "version": "0.0.1",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "cashpilot-mcp",
+      "version": "0.0.1",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "CASHPILOT_URL",
+          "description": "CashPilot instance URL (e.g. http://localhost:8080)",
+          "isRequired": true,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "CASHPILOT_API_KEY",
+          "description": "CashPilot admin API key",
+          "isRequired": true,
+          "format": "string",
+          "isSecret": true
+        }
+      ]
+    },
+    {
+      "registryType": "oci",
+      "identifier": "drumsergio/cashpilot-mcp:v0.0.1",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "CASHPILOT_URL",
+          "description": "CashPilot instance URL (e.g. http://localhost:8080)",
+          "isRequired": true,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "CASHPILOT_API_KEY",
+          "description": "CashPilot admin API key",
+          "isRequired": true,
+          "format": "string",
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}
