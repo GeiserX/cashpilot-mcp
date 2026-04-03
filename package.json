@@ -1,7 +1,7 @@
 {
   "name": "cashpilot-mcp",
   "mcpName": "io.github.GeiserX/cashpilot-mcp",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "description": "MCP server for CashPilot — monitor passive income, bandwidth sharing, and DePIN earnings via the Model Context Protocol",
   "license": "GPL-3.0",
   "repository": {
