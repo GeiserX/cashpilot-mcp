@@ -6,6 +6,7 @@ COPY . .
 RUN CGO_ENABLED=0 go build -ldflags "-s -w" -o /out/cashpilot-mcp ./cmd/server
 
 FROM alpine:3.23
+LABEL io.modelcontextprotocol.server.name="io.github.GeiserX/cashpilot-mcp"
 COPY --from=builder /out/cashpilot-mcp /usr/local/bin/cashpilot-mcp
 EXPOSE 8081
 ENV LISTEN_ADDR=0.0.0.0:8081

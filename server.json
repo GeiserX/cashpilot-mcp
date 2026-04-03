@@ -6,12 +6,12 @@
     "url": "https://github.com/GeiserX/cashpilot-mcp",
     "source": "github"
   },
-  "version": "0.0.1",
+  "version": "0.0.2",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "cashpilot-mcp",
-      "version": "0.0.1",
+      "version": "0.0.2",
       "transport": {
         "type": "stdio"
       },
@@ -34,7 +34,7 @@
     },
     {
       "registryType": "oci",
-      "identifier": "drumsergio/cashpilot-mcp:v0.0.1",
+      "identifier": "drumsergio/cashpilot-mcp:v0.0.2",
       "transport": {
         "type": "stdio"
       },
