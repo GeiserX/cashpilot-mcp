@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/images/banner.svg" alt="CashPilot MCP banner" width="900"/>
+</p>
+
 <h1 align="center">CashPilot-MCP</h1>
 
 <p align="center">
