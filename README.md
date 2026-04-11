@@ -5,6 +5,7 @@
 <h1 align="center">CashPilot-MCP</h1>
 
 <p align="center">
+  <a href="https://codecov.io/gh/GeiserX/cashpilot-mcp"><img src="https://codecov.io/gh/GeiserX/cashpilot-mcp/graph/badge.svg" alt="codecov"/></a>
   <a href="https://www.npmjs.com/package/cashpilot-mcp"><img src="https://img.shields.io/npm/v/cashpilot-mcp?style=flat-square&logo=npm" alt="npm"/></a>
   <img src="https://img.shields.io/badge/Go-1.24-blue?style=flat-square&logo=go&logoColor=white" alt="Go"/>
   <a href="https://hub.docker.com/r/drumsergio/cashpilot-mcp"><img src="https://img.shields.io/docker/pulls/drumsergio/cashpilot-mcp?style=flat-square&logo=docker" alt="Docker Pulls"/></a>
