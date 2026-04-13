@@ -139,3 +139,12 @@ CashPilot-MCP follows the [Contributor Covenant](http://contributor-covenant.org
 - [lynxprompt-mcp](https://github.com/GeiserX/lynxprompt-mcp) — AI configuration blueprints
 - [pumperly-mcp](https://github.com/GeiserX/pumperly-mcp) — Fuel and EV charging prices
 - [telegram-archive-mcp](https://github.com/GeiserX/telegram-archive-mcp) — Telegram message archive
+
+## Related Projects
+
+| Project | Description |
+|---------|-------------|
+| [CashPilot](https://github.com/GeiserX/CashPilot) | Self-hosted passive income platform with web UI for setup and earnings tracking |
+| [CashPilot-android](https://github.com/GeiserX/CashPilot-android) | Android monitoring agent for CashPilot passive income apps |
+| [cashpilot-ha](https://github.com/GeiserX/cashpilot-ha) | Home Assistant custom integration for CashPilot passive income monitoring |
+| [n8n-nodes-cashpilot](https://github.com/GeiserX/n8n-nodes-cashpilot) | n8n community node for CashPilot passive income monitoring |
