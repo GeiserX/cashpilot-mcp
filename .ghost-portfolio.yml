@@ -1,0 +1,7 @@
+description: "MCP server that exposes CashPilot to LLMs — monitor earnings, manage services, and control fleet workers via natural language."
+personalNote: "Once CashPilot was running, I wanted to ask my AI assistant 'how much did I earn today?' and actually get an answer. This MCP bridge makes that possible — listed on the official MCP registry and five other directories."
+keyFeatures:
+  - "Resources and tools for earnings, services, fleet status, and health scores"
+  - "Dual transport: HTTP (JSON-RPC) and stdio for any MCP-compatible client"
+  - "Listed on the official MCP Registry, Glama, MCPServers.org, mcp.so, and ToolSDK"
+techStack: "Go, MCP-GO, Docker, GoReleaser, npm"
