@@ -25,7 +25,7 @@
         },
         {
           "name": "CASHPILOT_API_KEY",
-          "description": "CashPilot admin API key",
+          "description": "CashPilot admin API key (CASHPILOT_ADMIN_API_KEY from your CashPilot instance — NOT the fleet key)",
           "isRequired": true,
           "format": "string",
           "isSecret": true
@@ -36,7 +36,8 @@
       "registryType": "oci",
       "identifier": "drumsergio/cashpilot-mcp:v0.1.0",
       "transport": {
-        "type": "stdio"
+        "type": "sse",
+        "port": 8081
       },
       "environmentVariables": [
         {
@@ -48,7 +49,7 @@
         },
         {
           "name": "CASHPILOT_API_KEY",
-          "description": "CashPilot admin API key",
+          "description": "CashPilot admin API key (CASHPILOT_ADMIN_API_KEY from your CashPilot instance — NOT the fleet key)",
           "isRequired": true,
           "format": "string",
           "isSecret": true
