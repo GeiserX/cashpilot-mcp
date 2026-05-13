@@ -47,7 +47,7 @@ services:
       - "127.0.0.1:8081:8081"
     environment:
       - CASHPILOT_URL=http://cashpilot:8080
-      - CASHPILOT_API_KEY=your-CASHPILOT_ADMIN_API_KEY-value
+      - CASHPILOT_API_KEY=<your-CASHPILOT_ADMIN_API_KEY>
 ```
 
 > **Security note:** The HTTP transport listens on `127.0.0.1:8081` by default. If you need to expose it on a network, place it behind a reverse proxy with authentication.
