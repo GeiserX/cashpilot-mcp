@@ -1,4 +1,4 @@
-# AGENTS.md — CashPilot MCP
+# CLAUDE.md — CashPilot MCP
 
 ## Project Overview
 

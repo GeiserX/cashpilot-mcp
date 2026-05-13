@@ -47,7 +47,7 @@ services:
       - "127.0.0.1:8081:8081"
     environment:
       - CASHPILOT_URL=http://cashpilot:8080
-      - CASHPILOT_API_KEY=your-admin-api-key
+      - CASHPILOT_API_KEY=<your-CASHPILOT_ADMIN_API_KEY>
 ```
 
 > **Security note:** The HTTP transport listens on `127.0.0.1:8081` by default. If you need to expose it on a network, place it behind a reverse proxy with authentication.
@@ -84,7 +84,7 @@ go run ./cmd/server
 | Variable           | Default                    | Description                                      |
 |--------------------|----------------------------|--------------------------------------------------|
 | `CASHPILOT_URL`    | `http://localhost:8080`    | CashPilot instance URL (without trailing /)      |
-| `CASHPILOT_API_KEY`| _(required)_               | Admin API key for authentication                 |
+| `CASHPILOT_API_KEY`| _(required)_               | Admin API key (`CASHPILOT_ADMIN_API_KEY` from your CashPilot instance — NOT the fleet key) |
 | `LISTEN_ADDR`      | `127.0.0.1:8081`           | HTTP listen address (Docker sets `0.0.0.0:8081`) |
 | `TRANSPORT`        | _(empty = HTTP)_           | Set to `stdio` for stdio transport               |
 
