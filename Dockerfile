@@ -9,7 +9,8 @@ FROM alpine:3.23
 LABEL io.modelcontextprotocol.server.name="io.github.GeiserX/cashpilot-mcp"
 COPY --from=builder /out/cashpilot-mcp /usr/local/bin/cashpilot-mcp
 EXPOSE 8081
-ENV LISTEN_ADDR=0.0.0.0:8081
+ENV LISTEN_ADDR=127.0.0.1:8081
+ENV MCP_AUTH_TOKEN=""
 ENV CASHPILOT_URL=http://cashpilot:8080
 ENV CASHPILOT_API_KEY=""
 ENTRYPOINT ["/usr/local/bin/cashpilot-mcp"]
