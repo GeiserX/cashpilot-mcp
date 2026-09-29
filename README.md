@@ -5,151 +5,44 @@
 <h1 align="center">CashPilot-MCP</h1>
 
 <p align="center">
-  <a href="https://codecov.io/gh/GeiserX/cashpilot-mcp"><img src="https://codecov.io/gh/GeiserX/cashpilot-mcp/graph/badge.svg" alt="codecov"/></a>
   <a href="https://www.npmjs.com/package/cashpilot-mcp"><img src="https://img.shields.io/npm/v/cashpilot-mcp?style=flat-square&logo=npm" alt="npm"/></a>
-  <img src="https://img.shields.io/badge/Go-1.24-blue?style=flat-square&logo=go&logoColor=white" alt="Go"/>
+  <a href="https://github.com/GeiserX/cashpilot-mcp/actions/workflows/ci.yml"><img src="https://github.com/GeiserX/cashpilot-mcp/actions/workflows/ci.yml/badge.svg" alt="CI"/></a>
   <a href="https://hub.docker.com/r/drumsergio/cashpilot-mcp"><img src="https://img.shields.io/docker/pulls/drumsergio/cashpilot-mcp?style=flat-square&logo=docker" alt="Docker Pulls"/></a>
   <a href="https://github.com/GeiserX/cashpilot-mcp/stargazers"><img src="https://img.shields.io/github/stars/GeiserX/cashpilot-mcp?style=flat-square&logo=github" alt="GitHub Stars"/></a>
   <a href="https://github.com/GeiserX/cashpilot-mcp/blob/main/LICENSE"><img src="https://img.shields.io/github/license/GeiserX/cashpilot-mcp?style=flat-square" alt="License"/></a>
 </p>
-<p align="center">
-  <a href="https://registry.modelcontextprotocol.io"><img src="https://img.shields.io/badge/MCP-Official%20Registry-E6522C?style=flat-square" alt="Official MCP Registry"/></a>
-  <a href="https://glama.ai/mcp/servers/GeiserX/cashpilot-mcp"><img src="https://glama.ai/mcp/servers/GeiserX/cashpilot-mcp/badges/score.svg" alt="Glama MCP Server" /></a>
-  <a href="https://mcpservers.org/servers/geiserx/cashpilot-mcp"><img src="https://img.shields.io/badge/MCPServers.org-listed-green?style=flat-square" alt="MCPServers.org"/></a>
-  <a href="https://mcp.so/server/cashpilot-mcp"><img src="https://img.shields.io/badge/mcp.so-listed-blue?style=flat-square" alt="mcp.so"/></a>
-  <a href="https://github.com/toolsdk-ai/toolsdk-mcp-registry"><img src="https://img.shields.io/badge/ToolSDK-Registry-orange?style=flat-square" alt="ToolSDK Registry"/></a>
-  <a href="https://github.com/punkpeye/awesome-mcp-servers#readme"><img src="https://img.shields.io/badge/listed%20on-awesome--mcp--servers-E6522C?style=flat-square" alt="listed on awesome-mcp-servers"/></a>
-</p>
 
 <p align="center"><strong>A tiny bridge that exposes any CashPilot instance as an MCP server, enabling LLMs to monitor passive income earnings, manage services, and control fleet workers.</strong></p>
 
----
+It talks to your own [CashPilot](https://github.com/GeiserX/CashPilot) instance with its admin API key, over HTTP or stdio.
 
-## What you get
+## Features
 
-| Type          | What for                                                           | MCP URI / Tool id                |
-|---------------|--------------------------------------------------------------------|----------------------------------|
-| **Resources** | Browse earnings, services, fleet status, and health scores read-only | `cashpilot://earnings/summary`<br>`cashpilot://earnings/breakdown`<br>`cashpilot://services/deployed`<br>`cashpilot://services/catalog`<br>`cashpilot://fleet/summary`<br>`cashpilot://workers`<br>`cashpilot://health/scores`<br>`cashpilot://collector-alerts` |
-| **Tools**     | Query earnings, manage services, and trigger collection             | `get_earnings_daily`<br>`get_earnings_history`<br>`get_service_logs`<br>`restart_service`<br>`stop_service`<br>`start_service`<br>`deploy_service`<br>`remove_service`<br>`trigger_collection`<br>`get_compose` |
+- Read-only resources for earnings, deployed services, the catalog, fleet status, workers, health scores and collector alerts (`cashpilot://earnings/summary`, `cashpilot://fleet/summary`, ...).
+- Tools to query daily and historical earnings, read service logs, and start, stop, restart, deploy or remove services.
+- `trigger_collection` runs an earnings collection across all services now; `get_compose` returns a service's Docker Compose definition.
+- One JSON-RPC endpoint (`/mcp`) over HTTP, or stdio with `TRANSPORT=stdio`.
+- Listens on `127.0.0.1:8081` by default; `MCP_AUTH_TOKEN` adds bearer auth when you expose it.
+- Ships as a Docker image, an npm package (`npx cashpilot-mcp`) and multi-arch Go binaries.
 
-Everything is exposed over a single JSON-RPC endpoint (`/mcp`).
-LLMs / Agents can: `initialize` -> `readResource` -> `listTools` -> `callTool` ... and so on.
-
----
-
-## Quick-start (Docker Compose)
-
-```yaml
-services:
-  cashpilot-mcp:
-    image: drumsergio/cashpilot-mcp:latest
-    ports:
-      - "127.0.0.1:8081:8081"
-    environment:
-      - CASHPILOT_URL=http://cashpilot:8080
-      - CASHPILOT_API_KEY=<your-CASHPILOT_ADMIN_API_KEY>
-```
-
-> **Security note:** The HTTP transport listens on `127.0.0.1:8081` by default. If you need to expose it on a network, place it behind a reverse proxy with authentication.
-
-## Install via npm (stdio transport)
+## Quick start
 
 ```sh
 npx cashpilot-mcp
 ```
 
-Or install globally:
+Set `CASHPILOT_URL` and `CASHPILOT_API_KEY` (your `CASHPILOT_ADMIN_API_KEY`, not the fleet key) first. Docker Compose and local builds are in [Installation](https://github.com/GeiserX/cashpilot-mcp/blob/main/docs/installation.md).
 
-```sh
-npm install -g cashpilot-mcp
-cashpilot-mcp
-```
+## Documentation
 
-This downloads the pre-built Go binary from GitHub Releases for your platform and runs it with stdio transport. Requires at least one [published release](https://github.com/GeiserX/cashpilot-mcp/releases).
+- [Installation](https://github.com/GeiserX/cashpilot-mcp/blob/main/docs/installation.md): Docker Compose, npm, local build
+- [Configuration](https://github.com/GeiserX/cashpilot-mcp/blob/main/docs/configuration.md): environment variables and an example client config
+- [Resources and tools](https://github.com/GeiserX/cashpilot-mcp/blob/main/docs/usage.md)
+- [Development](https://github.com/GeiserX/cashpilot-mcp/blob/main/docs/development.md): testing, contributing, credits
+- [Related projects and listings](https://github.com/GeiserX/cashpilot-mcp/blob/main/docs/related.md)
 
-## Local build
+Related: [CashPilot](https://github.com/GeiserX/CashPilot), the passive income fleet manager this server talks to.
 
-```sh
-git clone https://github.com/GeiserX/cashpilot-mcp
-cd cashpilot-mcp
+## License
 
-# (optional) create .env from the sample
-cp .env.example .env && $EDITOR .env
-
-go run ./cmd/server
-```
-
-## Configuration
-
-| Variable           | Default                    | Description                                      |
-|--------------------|----------------------------|--------------------------------------------------|
-| `CASHPILOT_URL`    | `http://localhost:8080`    | CashPilot instance URL (without trailing /)      |
-| `CASHPILOT_API_KEY`| _(required)_               | Admin API key (`CASHPILOT_ADMIN_API_KEY` from your CashPilot instance — NOT the fleet key) |
-| `LISTEN_ADDR`      | `127.0.0.1:8081`           | HTTP listen address (Docker sets `127.0.0.1:8081`) |
-| `MCP_AUTH_TOKEN`   | _(empty)_                  | Bearer token for HTTP transport auth. **Required** when `LISTEN_ADDR` is not loopback |
-| `TRANSPORT`        | _(empty = HTTP)_           | Set to `stdio` for stdio transport               |
-
-Put them in a `.env` file (from `.env.example`) or set them in the environment.
-
-## Testing
-
-Tested with [Inspector](https://modelcontextprotocol.io/docs/tools/inspector) and it is currently fully working. Before making a PR, make sure this MCP server behaves well via this medium.
-
-## Example configuration for client LLMs
-
-```json
-{
-  "schema_version": "v1",
-  "name_for_human": "CashPilot-MCP",
-  "name_for_model": "cashpilot_mcp",
-  "description_for_human": "Monitor passive income earnings, manage bandwidth-sharing services, and control fleet workers via CashPilot.",
-  "description_for_model": "Interact with a CashPilot instance that manages passive income services. First call initialize, then reuse the returned session id in header \"Mcp-Session-Id\" for every other call. Use readResource to fetch URIs that begin with cashpilot://. Use listTools to discover available actions and callTool to execute them.",
-  "auth": {
-    "type": "bearer",
-    "token": "<your-MCP_AUTH_TOKEN>"
-  },
-  "api": {
-    "type": "jsonrpc-mcp",
-    "url":  "http://localhost:8081/mcp",
-    "init_method": "initialize",
-    "session_header": "Mcp-Session-Id"
-  },
-  "contact_email": "acsdesk@protonmail.com",
-  "legal_info_url": "https://github.com/GeiserX/cashpilot-mcp/blob/main/LICENSE"
-}
-```
-
-## Credits
-
-[CashPilot](https://github.com/GeiserX/CashPilot) -- passive income fleet management dashboard
-
-[MCP-GO](https://github.com/mark3labs/mcp-go) -- modern MCP implementation
-
-[GoReleaser](https://goreleaser.com/) -- painless multi-arch releases
-
-## Maintainers
-
-[@GeiserX](https://github.com/GeiserX).
-
-## Contributing
-
-Feel free to dive in! [Open an issue](https://github.com/GeiserX/cashpilot-mcp/issues/new) or submit PRs.
-
-CashPilot-MCP follows the [Contributor Covenant](http://contributor-covenant.org/version/2/1/) Code of Conduct.
-
-## Other MCP Servers by GeiserX
-
-- [duplicacy-mcp](https://github.com/GeiserX/duplicacy-mcp) — Backup health monitoring
-- [genieacs-mcp](https://github.com/GeiserX/genieacs-mcp) — TR-069 device management
-- [lynxprompt-mcp](https://github.com/GeiserX/lynxprompt-mcp) — AI configuration blueprints
-- [pumperly-mcp](https://github.com/GeiserX/pumperly-mcp) — Fuel and EV charging prices
-- [telegram-archive-mcp](https://github.com/GeiserX/telegram-archive-mcp) — Telegram message archive
-
-## Related Projects
-
-| Project | Description |
-|---------|-------------|
-| [CashPilot](https://github.com/GeiserX/CashPilot) | Self-hosted passive income platform with web UI for setup and earnings tracking |
-| [CashPilot-android](https://github.com/GeiserX/CashPilot-android) | Android monitoring agent for CashPilot passive income apps |
-| [cashpilot-ha](https://github.com/GeiserX/cashpilot-ha) | Home Assistant custom integration for CashPilot passive income monitoring |
-| [n8n-nodes-cashpilot](https://github.com/GeiserX/n8n-nodes-cashpilot) | n8n community node for CashPilot passive income monitoring |
+[GPL-3.0](https://github.com/GeiserX/cashpilot-mcp/blob/main/LICENSE)
