@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/GeiserX/cashpilot-mcp/main/docs/images/banner.svg" alt="CashPilot MCP banner" width="900"/>
+  <img src="https://raw.githubusercontent.com/GeiserX/cashpilot-mcp/main/docs/images/banner.svg" alt="cashpilot-mcp" width="900"/>
 </p>
 
-<h1 align="center">CashPilot-MCP</h1>
+<h1 align="center">cashpilot-mcp</h1>
 
 <p align="center">
   <a href="https://www.npmjs.com/package/cashpilot-mcp"><img src="https://img.shields.io/npm/v/cashpilot-mcp?style=flat-square&logo=npm" alt="npm"/></a>
@@ -27,22 +27,37 @@ It talks to your own [CashPilot](https://github.com/GeiserX/CashPilot) instance 
 
 ## Quick start
 
-```sh
-npx cashpilot-mcp
+Register the npm package in your MCP client (Claude Desktop, Claude Code, Cursor); `npx` runs it over stdio:
+
+```json
+{
+  "mcpServers": {
+    "cashpilot": {
+      "command": "npx",
+      "args": ["-y", "cashpilot-mcp"],
+      "env": {
+        "CASHPILOT_URL": "http://localhost:8080",
+        "CASHPILOT_API_KEY": "<your CASHPILOT_ADMIN_API_KEY>"
+      }
+    }
+  }
+}
 ```
 
-Set `CASHPILOT_URL` and `CASHPILOT_API_KEY` (your `CASHPILOT_ADMIN_API_KEY`, not the fleet key) first. Docker Compose and local builds are in [Installation](https://github.com/GeiserX/cashpilot-mcp/blob/main/docs/installation.md).
+The key is CashPilot's admin API key, not the fleet key. Docker Compose, the HTTP server and local builds are in [Getting started](https://github.com/GeiserX/cashpilot-mcp/blob/main/docs/getting-started.md).
 
 ## Documentation
 
-- [Installation](https://github.com/GeiserX/cashpilot-mcp/blob/main/docs/installation.md): Docker Compose, npm, local build
-- [Configuration](https://github.com/GeiserX/cashpilot-mcp/blob/main/docs/configuration.md): environment variables and an example client config
-- [Resources and tools](https://github.com/GeiserX/cashpilot-mcp/blob/main/docs/usage.md)
+- [Getting started](https://github.com/GeiserX/cashpilot-mcp/blob/main/docs/getting-started.md): Docker Compose, npm, local build
+- [Configuration](https://github.com/GeiserX/cashpilot-mcp/blob/main/docs/configuration.md): environment variables and MCP client configuration
+- [Usage](https://github.com/GeiserX/cashpilot-mcp/blob/main/docs/usage.md): resources and tools
 - [Development](https://github.com/GeiserX/cashpilot-mcp/blob/main/docs/development.md): testing, contributing, credits
-- [Related projects and listings](https://github.com/GeiserX/cashpilot-mcp/blob/main/docs/related.md)
+- [Related projects](https://github.com/GeiserX/cashpilot-mcp/blob/main/docs/related.md): the family and registry listings
 
-Related: [CashPilot](https://github.com/GeiserX/CashPilot), the passive income fleet manager this server talks to.
+## Related projects
+
+[CashPilot](https://github.com/GeiserX/CashPilot), the passive income fleet manager this server talks to.
 
 ## License
 
-[GPL-3.0](https://github.com/GeiserX/cashpilot-mcp/blob/main/LICENSE)
+[GPL-3.0-or-later](https://github.com/GeiserX/cashpilot-mcp/blob/main/LICENSE)
