@@ -5,7 +5,7 @@
 ```yaml
 services:
   cashpilot-mcp:
-    image: drumsergio/cashpilot-mcp:v0.2.1
+    image: drumsergio/cashpilot-mcp:v0.2.2
     ports:
       - "127.0.0.1:8081:8081"
     environment:

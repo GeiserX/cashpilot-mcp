@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
         with:
-          go-version: '1.24'
+          go-version-file: go.mod
       # .goreleaser.yaml skips signing when the secrets are absent, which is
       # right for snapshots and wrong for a release: stop here instead.
       - name: Require the macOS signing secrets
