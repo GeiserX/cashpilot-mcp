@@ -36,10 +36,17 @@
       "registryType": "oci",
       "identifier": "drumsergio/cashpilot-mcp:v0.2.2",
       "transport": {
-        "type": "sse",
-        "port": 8081
+        "type": "stdio"
       },
       "environmentVariables": [
+        {
+          "name": "TRANSPORT",
+          "description": "Runs the image on stdio instead of its default HTTP listener",
+          "isRequired": true,
+          "format": "string",
+          "isSecret": false,
+          "value": "stdio"
+        },
         {
           "name": "CASHPILOT_URL",
           "description": "CashPilot instance URL (e.g. http://localhost:8080)",
