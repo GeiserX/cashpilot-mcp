@@ -29,6 +29,14 @@ jobs:
               exit 1
             fi
           done
+          # The image entry names its tag in the identifier (drumsergio/cashpilot-mcp:vX.Y.Z).
+          got=$(node -p "require('./server.json').packages.filter(p => p.registryType === 'oci').map(p => p.identifier.split(':').pop()).join(' ')")
+          for tag in $got; do
+            if [ "$tag" != "$GITHUB_REF_NAME" ]; then
+              echo "::error file=server.json::the image entry names $tag, the tag is $GITHUB_REF_NAME"
+              exit 1
+            fi
+          done
 
   goreleaser:
     needs: check-version
