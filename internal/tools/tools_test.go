@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -904,5 +905,24 @@ func TestNewDeployService_returns_correct_tool_name(t *testing.T) {
 	tool, _ := NewDeployService(c)
 	if tool.Name != "deploy_service" {
 		t.Errorf("tool name = %q", tool.Name)
+	}
+}
+
+func TestListSchema_is_valid_json_whatever_the_field(t *testing.T) {
+	for _, field := range []string{"earnings", `we"ird`, `x":{},"y`} {
+		var tool mcp.Tool
+		listSchema(field, "array", `a "quoted" description`)(&tool)
+		var s struct {
+			Type       string                    `json:"type"`
+			Properties map[string]map[string]any `json:"properties"`
+			Required   []string                  `json:"required"`
+		}
+		if err := json.Unmarshal(tool.RawOutputSchema, &s); err != nil {
+			t.Fatalf("field %q: outputSchema is not JSON: %v\n%s", field, err, tool.RawOutputSchema)
+		}
+		if s.Type != "object" || len(s.Properties) != 1 || s.Properties[field]["type"] != "array" ||
+			len(s.Required) != 1 || s.Required[0] != field {
+			t.Errorf("field %q: outputSchema = %s", field, tool.RawOutputSchema)
+		}
 	}
 }

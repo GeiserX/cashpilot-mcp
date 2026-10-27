@@ -114,22 +114,19 @@ func intArg(req mcp.CallToolRequest, name string, def, lo, hi int) (int, error) 
 }
 
 // listSchema is an outputSchema whose result holds one field: an array of
-// records or a single object, as CashPilot returns it.
+// records or a single object, as CashPilot returns it. It is built from Go
+// values and marshalled, so no field or description can break the JSON.
 func listSchema(field, kind, desc string) mcp.ToolOption {
-	var inner string
+	inner := map[string]any{"type": "object", "description": desc}
 	if kind == "array" {
-		inner = `{"type":"array","items":{"type":"object"},"description":` + quote(desc) + `}`
-	} else {
-		inner = `{"type":"object","description":` + quote(desc) + `}`
+		inner = map[string]any{"type": "array", "items": map[string]any{"type": "object"}, "description": desc}
 	}
-	return mcp.WithRawOutputSchema(json.RawMessage(
-		`{"type":"object","properties":{"` + field + `":` + inner + `},"required":["` + field + `"]}`,
-	))
-}
-
-func quote(s string) string {
-	b, _ := json.Marshal(s)
-	return string(b)
+	b, _ := json.Marshal(map[string]any{ // maps of strings always marshal
+		"type":       "object",
+		"properties": map[string]any{field: inner},
+		"required":   []string{field},
+	})
+	return mcp.WithRawOutputSchema(b)
 }
 
 // structured returns CashPilot's JSON both as structuredContent (under field)

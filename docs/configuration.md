@@ -18,6 +18,8 @@ The server speaks MCP 2026-07-28, 2025-11-25, 2025-06-18, 2025-03-26 and 2024-11
 
 HTTP limits: request bodies over 1 MiB get 413, a cross-site `Origin` gets 403, headers must arrive within 10 seconds, and idle connections close after 2 minutes.
 
+For legacy clients, an authenticated `GET /mcp` without an `MCP-Protocol-Version` header opens a server-sent event stream that stays open until the client closes it, and `DELETE /mcp` answers 200 with nothing to delete. With `MCP-Protocol-Version: 2026-07-28`, `GET` answers 405.
+
 ## MCP client configuration
 
 The README has ready snippets for Claude Code, Claude Desktop, Cursor, VS Code and Codex. For the HTTP server (Docker or `go run`), point a client that accepts remote servers at `/mcp` with the bearer token:
