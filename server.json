@@ -18,12 +18,12 @@
       ]
     }
   ],
-  "version": "0.2.3",
+  "version": "0.3.0",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "cashpilot-mcp",
-      "version": "0.2.3",
+      "version": "0.3.0",
       "transport": {
         "type": "stdio"
       },
@@ -54,7 +54,7 @@
     },
     {
       "registryType": "oci",
-      "identifier": "drumsergio/cashpilot-mcp:v0.2.3",
+      "identifier": "drumsergio/cashpilot-mcp:v0.3.0",
       "transport": {
         "type": "stdio"
       },
