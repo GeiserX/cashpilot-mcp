@@ -2,21 +2,24 @@
 "use strict";
 
 const { execFileSync } = require("child_process");
-const path = require("path");
 const fs = require("fs");
+const { install, BIN_PATH } = require("./postinstall.js");
 
-const BIN_NAME = process.platform === "win32" ? "cashpilot-mcp.exe" : "cashpilot-mcp";
-const BIN_PATH = path.join(__dirname, "bin", BIN_NAME);
+async function main() {
+  // npm 12, pnpm and Bun skip postinstall by default, so the first run
+  // downloads (and verifies) the binary itself.
+  if (!fs.existsSync(BIN_PATH)) {
+    await install();
+  }
+  const env = Object.assign({}, process.env, { TRANSPORT: "stdio" });
+  try {
+    execFileSync(BIN_PATH, process.argv.slice(2), { env, stdio: "inherit" });
+  } catch (err) {
+    process.exit(err.status || 1);
+  }
+}
 
-if (!fs.existsSync(BIN_PATH)) {
-  console.error("cashpilot-mcp binary not found. Run: npm run postinstall");
+main().catch((err) => {
+  process.stderr.write(`cashpilot-mcp: ${err.message}\n`);
   process.exit(1);
-}
-
-const env = Object.assign({}, process.env, { TRANSPORT: "stdio" });
-
-try {
-  execFileSync(BIN_PATH, [], { env, stdio: "inherit" });
-} catch (err) {
-  process.exit(err.status || 1);
-}
+});
