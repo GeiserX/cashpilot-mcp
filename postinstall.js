@@ -81,9 +81,17 @@ function saveStream(stream, dest, maxBytes = MAX_DOWNLOAD_BYTES) {
       if (failed) return;
       failed = true;
       stream.destroy();
+      // Remove the partial file only once the handle is closed: Windows
+      // refuses to delete an open file.
+      out.once("close", () => {
+        try {
+          fs.rmSync(dest, { force: true });
+        } catch (_) {
+          // best effort; the original error is what matters
+        }
+        reject(err);
+      });
       out.destroy();
-      fs.rmSync(dest, { force: true });
-      reject(err);
     };
     stream.on("data", (chunk) => {
       size += chunk.length;

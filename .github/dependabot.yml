@@ -1,7 +1,8 @@
 version: 2
 updates:
-  # Majors are proposed too: ignoring them kept mcp-go on v0.x long after v1
-  # brought protocol 2026-07-28. Each major lands as its own PR, so CI judges it.
+  # Majors are not ignored: that rule kept mcp-go on v0.x long after v1 brought
+  # protocol 2026-07-28. Dependabot proposes majors that keep the module path
+  # (v0 to v1); a /v2 path change still needs a manual bump.
   - package-ecosystem: gomod
     directory: /
     schedule:

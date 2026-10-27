@@ -54,3 +54,8 @@ test("downloads past the size cap are refused and removed", async () => {
   await assert.rejects(saveStream(Readable.from([Buffer.alloc(10), Buffer.alloc(10)]), dest, 15), /larger than 15 bytes/);
   assert.strictEqual(fs.existsSync(dest), false);
 });
+
+test("a failed download rejects even when the destination cannot be written", async () => {
+  const dest = path.join(tmpdir(), "missing-dir", "out");
+  await assert.rejects(saveStream(Readable.from([Buffer.alloc(10)]), dest, 100));
+});
