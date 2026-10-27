@@ -2,7 +2,7 @@
 
 <p>
   <a href="https://codecov.io/gh/GeiserX/cashpilot-mcp"><img src="https://codecov.io/gh/GeiserX/cashpilot-mcp/graph/badge.svg" alt="codecov"/></a>
-  <img src="https://img.shields.io/badge/Go-1.24-blue?style=flat-square&logo=go&logoColor=white" alt="Go"/>
+  <img src="https://img.shields.io/badge/Go-1.25-blue?style=flat-square&logo=go&logoColor=white" alt="Go"/>
 </p>
 
 ## Testing

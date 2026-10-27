@@ -1,11 +1,23 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.GeiserX/cashpilot-mcp",
-  "description": "MCP server for CashPilot — monitor passive income, bandwidth sharing, and DePIN earnings",
+  "title": "CashPilot",
+  "description": "MCP server for CashPilot: track passive income and DePIN earnings, manage services",
   "repository": {
     "url": "https://github.com/GeiserX/cashpilot-mcp",
-    "source": "github"
+    "source": "github",
+    "id": "1198347321"
   },
+  "websiteUrl": "https://github.com/GeiserX/cashpilot-mcp",
+  "icons": [
+    {
+      "src": "https://raw.githubusercontent.com/GeiserX/CashPilot/main/docs/images/icon.svg",
+      "mimeType": "image/svg+xml",
+      "sizes": [
+        "any"
+      ]
+    }
+  ],
   "version": "0.2.3",
   "packages": [
     {
@@ -25,10 +37,18 @@
         },
         {
           "name": "CASHPILOT_API_KEY",
-          "description": "CashPilot admin API key (CASHPILOT_ADMIN_API_KEY from your CashPilot instance — NOT the fleet key)",
+          "description": "CashPilot API key: the admin key (CASHPILOT_ADMIN_API_KEY) for full control, or the read-only key (CASHPILOT_READONLY_API_KEY) together with CASHPILOT_READ_ONLY=1. Not the fleet key.",
           "isRequired": true,
           "format": "string",
           "isSecret": true
+        },
+        {
+          "name": "CASHPILOT_READ_ONLY",
+          "description": "Set to true (or 1) to register only the tools that change nothing (no start, stop, restart, deploy, remove or collection)",
+          "isRequired": false,
+          "format": "boolean",
+          "isSecret": false,
+          "default": "false"
         }
       ]
     },
@@ -56,10 +76,18 @@
         },
         {
           "name": "CASHPILOT_API_KEY",
-          "description": "CashPilot admin API key (CASHPILOT_ADMIN_API_KEY from your CashPilot instance — NOT the fleet key)",
+          "description": "CashPilot API key: the admin key (CASHPILOT_ADMIN_API_KEY) for full control, or the read-only key (CASHPILOT_READONLY_API_KEY) together with CASHPILOT_READ_ONLY=1. Not the fleet key.",
           "isRequired": true,
           "format": "string",
           "isSecret": true
+        },
+        {
+          "name": "CASHPILOT_READ_ONLY",
+          "description": "Set to true (or 1) to register only the tools that change nothing (no start, stop, restart, deploy, remove or collection)",
+          "isRequired": false,
+          "format": "boolean",
+          "isSecret": false,
+          "default": "false"
         }
       ]
     }

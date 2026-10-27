@@ -15,14 +15,17 @@ MCP (Model Context Protocol) server built in Go. Exposes tools and resources for
 
 ### Key Files
 
-- `main.go` — Entry point, MCP server initialization
-- `tools/` — MCP tool implementations
+- `cmd/server/main.go`: Entry point: config, stdio or HTTP transport
+- `internal/app/`: Server assembly (`NewServer`), HTTP hardening, protocol smoke tests
+- `internal/tools/`, `internal/resources/`: MCP tools and resources
+- `client/`: CashPilot REST client (slug validation, response caps)
 - `Dockerfile` — Container build
 
 ## Development
 
 ```bash
-go build -o cashpilot-mcp .
+go build -o cashpilot-mcp ./cmd/server
+go test -race ./... && node --test
 ```
 
 ## Security
