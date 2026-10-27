@@ -26,7 +26,7 @@ func NewRestartService(c *client.Client) (mcp.Tool, server.ToolHandlerFunc) {
 			return mcp.NewToolResultError(err.Error()), nil
 		}
 
-		resp, err := c.RestartService(ctx, slug)
+		resp, err := c.RestartService(ctx, slug, client.Target{})
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}

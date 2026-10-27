@@ -37,7 +37,7 @@ func NewGetServiceLogs(c *client.Client) (mcp.Tool, server.ToolHandlerFunc) {
 			lines = 1000
 		}
 
-		resp, err := c.GetServiceLogs(ctx, slug, lines)
+		resp, err := c.GetServiceLogs(ctx, slug, lines, client.Target{})
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}

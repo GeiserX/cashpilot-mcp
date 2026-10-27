@@ -43,7 +43,7 @@ func NewDeployService(c *client.Client) (mcp.Tool, server.ToolHandlerFunc) {
 			}
 		}
 
-		resp, err := c.DeployService(ctx, slug, body)
+		resp, err := c.DeployService(ctx, slug, body, client.Target{})
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}
