@@ -1,5 +1,7 @@
 version: 2
 updates:
+  # Majors are proposed too: ignoring them kept mcp-go on v0.x long after v1
+  # brought protocol 2026-07-28. Each major lands as its own PR, so CI judges it.
   - package-ecosystem: gomod
     directory: /
     schedule:
@@ -9,10 +11,6 @@ updates:
         update-types:
           - minor
           - patch
-    ignore:
-      - dependency-name: '*'
-        update-types:
-          - version-update:semver-major
   - package-ecosystem: npm
     directory: /
     schedule:
