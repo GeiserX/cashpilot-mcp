@@ -1,3 +1,4 @@
+version: 2
 project_name: cashpilot-mcp
 release:
   github:
@@ -9,6 +10,11 @@ release:
 builds:
   - id: bin
     main: ./cmd/server
+    # Static binaries: the npm package must also run on musl (Alpine).
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
     goos: [linux, windows, darwin]
     goarch: [amd64, arm64]
     ldflags:
@@ -37,10 +43,10 @@ notarize:
 
 archives:
   - id: dist
-    builds: [bin]
+    ids: [bin]
     format_overrides:
       - goos: windows
-        format: zip
+        formats: [zip]
 
 checksum:
   name_template: 'checksums.txt'
@@ -65,6 +71,9 @@ dockers:
       - .goreleaser.yaml
     build_flag_templates:
       - "--platform=linux/amd64"
+      - "--build-arg=VERSION={{ .Version }}"
+      - "--build-arg=COMMIT={{ .ShortCommit }}"
+      - "--build-arg=DATE={{ .Date }}"
   # ------------- arm64 -------------
   - image_templates:
       - "drumsergio/cashpilot-mcp:{{ .Tag }}-arm64"
@@ -84,6 +93,9 @@ dockers:
       - .goreleaser.yaml
     build_flag_templates:
       - "--platform=linux/arm64"
+      - "--build-arg=VERSION={{ .Version }}"
+      - "--build-arg=COMMIT={{ .ShortCommit }}"
+      - "--build-arg=DATE={{ .Date }}"
 
 docker_manifests:
   # stitch the per-arch images into a combined tag = multi-arch
@@ -97,7 +109,7 @@ docker_manifests:
       - 'drumsergio/cashpilot-mcp:latest-arm64'
 
 snapshot:
-  name_template: "snapshot-{{ .ShortCommit }}"
+  version_template: "snapshot-{{ .ShortCommit }}"
 
 changelog:
   groups:
@@ -105,3 +117,5 @@ changelog:
       regexp: '^feat'
     - title: "Fixes"
       regexp: '^fix'
+    - title: "Other changes"
+      order: 999

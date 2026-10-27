@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -127,14 +128,14 @@ func TestDo_omits_authorization_header_when_api_key_empty(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestDo_returns_error_on_4xx_status(t *testing.T) {
-	srv, _ := newCapturingServer(t, 404, "not found")
+	srv, _ := newCapturingServer(t, 404, `{"detail":"not found"}`)
 	c := NewClient(srv.URL, "")
 
 	_, err := c.GetEarningsSummary(context.Background())
 	if err == nil {
 		t.Fatal("expected error for 404 status")
 	}
-	if !strings.Contains(err.Error(), "CashPilot error 404") {
+	if !strings.Contains(err.Error(), "CashPilot answered 404") {
 		t.Errorf("error = %q, want it to contain status code", err.Error())
 	}
 }
@@ -147,21 +148,65 @@ func TestDo_returns_error_on_5xx_status(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for 500 status")
 	}
-	if !strings.Contains(err.Error(), "CashPilot error 500") {
+	if !strings.Contains(err.Error(), "CashPilot answered 500") {
 		t.Errorf("error = %q, want it to contain status code", err.Error())
 	}
 }
 
-func TestDo_returns_body_in_error_message(t *testing.T) {
-	srv, _ := newCapturingServer(t, 403, "forbidden-detail")
+func TestDo_quotes_fastapi_detail_in_error_message(t *testing.T) {
+	srv, _ := newCapturingServer(t, 403, `{"detail":"forbidden-detail"}`)
 	c := NewClient(srv.URL, "")
 
 	_, err := c.GetEarningsSummary(context.Background())
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	if !strings.Contains(err.Error(), "forbidden-detail") {
-		t.Errorf("error = %q, want it to contain response body", err.Error())
+	if !strings.Contains(err.Error(), "forbidden-detail") || !strings.Contains(err.Error(), "read-only key") {
+		t.Errorf("error = %q, want the detail and the role hint", err.Error())
+	}
+}
+
+func TestDo_never_echoes_a_non_json_error_body(t *testing.T) {
+	srv, _ := newCapturingServer(t, 502, "<html><body>proxy at 10.1.2.3 failed</body></html>")
+	c := NewClient(srv.URL, "")
+
+	_, err := c.GetEarningsSummary(context.Background())
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if strings.Contains(err.Error(), "10.1.2.3") || strings.Contains(err.Error(), "<html>") {
+		t.Errorf("error leaks the raw body: %q", err.Error())
+	}
+}
+
+func TestDo_adds_worker_hint_when_several_workers_are_online(t *testing.T) {
+	srv, _ := newCapturingServer(t, 400, `{"detail":"worker_id is required (multiple workers online)"}`)
+	c := NewClient(srv.URL, "")
+
+	_, err := c.RestartService(context.Background(), "honeygain", Target{})
+	if err == nil || !strings.Contains(err.Error(), "list_workers") {
+		t.Fatalf("error = %v, want a pointer to list_workers", err)
+	}
+}
+
+func TestDo_refuses_an_oversized_response(t *testing.T) {
+	srv, _ := newCapturingServer(t, 200, strings.Repeat("x", MaxResponseBytes+1))
+	c := NewClient(srv.URL, "")
+
+	if _, err := c.GetEarningsSummary(context.Background()); err == nil {
+		t.Fatal("expected an error for a response over the cap")
+	}
+}
+
+func TestDo_transport_error_hides_the_cashpilot_url(t *testing.T) {
+	c := NewClient("http://127.0.0.1:1", "")
+
+	_, err := c.GetEarningsSummary(context.Background())
+	if err == nil {
+		t.Fatal("expected connection error")
+	}
+	if strings.Contains(err.Error(), "127.0.0.1") {
+		t.Errorf("error leaks the URL: %q", err.Error())
 	}
 }
 
@@ -258,7 +303,7 @@ func TestGetHealthScores_sends_correct_path(t *testing.T) {
 	srv, getReq := newCapturingServer(t, 200, `{}`)
 	c := NewClient(srv.URL, "")
 
-	_, err := c.GetHealthScores(context.Background())
+	_, err := c.GetHealthScores(context.Background(), 0)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -322,7 +367,7 @@ func TestGetServiceLogs_sends_slug_and_lines(t *testing.T) {
 	srv, getReq := newCapturingServer(t, 200, `"logs..."`)
 	c := NewClient(srv.URL, "")
 
-	_, err := c.GetServiceLogs(context.Background(), "honeygain", 100)
+	_, err := c.GetServiceLogs(context.Background(), "honeygain", 100, Target{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -343,7 +388,7 @@ func TestRestartService_sends_post_to_correct_path(t *testing.T) {
 	srv, getReq := newCapturingServer(t, 200, `{"status":"ok"}`)
 	c := NewClient(srv.URL, "")
 
-	_, err := c.RestartService(context.Background(), "earnapp")
+	_, err := c.RestartService(context.Background(), "earnapp", Target{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -360,7 +405,7 @@ func TestStopService_sends_post_to_correct_path(t *testing.T) {
 	srv, getReq := newCapturingServer(t, 200, `{"status":"ok"}`)
 	c := NewClient(srv.URL, "")
 
-	_, err := c.StopService(context.Background(), "peer2profit")
+	_, err := c.StopService(context.Background(), "peer2profit", Target{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -377,7 +422,7 @@ func TestStartService_sends_post_to_correct_path(t *testing.T) {
 	srv, getReq := newCapturingServer(t, 200, `{"status":"ok"}`)
 	c := NewClient(srv.URL, "")
 
-	_, err := c.StartService(context.Background(), "repocket")
+	_, err := c.StartService(context.Background(), "repocket", Target{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -394,7 +439,7 @@ func TestDeployService_sends_post_with_body(t *testing.T) {
 	srv, getReq := newCapturingServer(t, 200, `{"deployed":true}`)
 	c := NewClient(srv.URL, "")
 
-	_, err := c.DeployService(context.Background(), "myservice", []byte(`{"env":{"KEY":"VAL"}}`))
+	_, err := c.DeployService(context.Background(), "myservice", []byte(`{"env":{"KEY":"VAL"}}`), Target{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -435,7 +480,7 @@ func TestRemoveService_sends_delete_to_correct_path(t *testing.T) {
 	srv, getReq := newCapturingServer(t, 200, `{"removed":true}`)
 	c := NewClient(srv.URL, "")
 
-	_, err := c.RemoveService(context.Background(), "proxylite")
+	_, err := c.RemoveService(context.Background(), "proxylite", Target{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -456,7 +501,7 @@ func TestGetCompose_sends_correct_path(t *testing.T) {
 	srv, getReq := newCapturingServer(t, 200, `version: "3"`)
 	c := NewClient(srv.URL, "")
 
-	_, err := c.GetCompose(context.Background(), "honeygain")
+	_, err := c.GetCompose(context.Background(), "honeygain", "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -473,18 +518,81 @@ func TestGetCompose_sends_correct_path(t *testing.T) {
 // Slug URL-encoding
 // ---------------------------------------------------------------------------
 
-func TestServiceLogs_url_encodes_slug_with_special_chars(t *testing.T) {
-	srv, getReq := newCapturingServer(t, 200, `""`)
+func TestServiceMethods_refuse_invalid_slugs_without_a_request(t *testing.T) {
+	sent := false
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { sent = true }))
+	t.Cleanup(srv.Close)
+	c := NewClient(srv.URL, "")
+	ctx := context.Background()
+	for _, slug := range []string{"", ".", "..", "my/service", "../fleet", "Honeygain", "a?b", "a#b", "a b", strings.Repeat("a", 65)} {
+		calls := map[string]func() error{
+			"logs":    func() error { _, err := c.GetServiceLogs(ctx, slug, 1, Target{}); return err },
+			"restart": func() error { _, err := c.RestartService(ctx, slug, Target{}); return err },
+			"stop":    func() error { _, err := c.StopService(ctx, slug, Target{}); return err },
+			"start":   func() error { _, err := c.StartService(ctx, slug, Target{}); return err },
+			"deploy":  func() error { _, err := c.DeployService(ctx, slug, []byte("{}"), Target{}); return err },
+			"remove":  func() error { _, err := c.RemoveService(ctx, slug, Target{}); return err },
+			"compose": func() error { _, err := c.GetCompose(ctx, slug, ""); return err },
+		}
+		for name, call := range calls {
+			if err := call(); !errors.Is(err, ErrInvalidSlug) {
+				t.Errorf("%s(%q): err = %v, want ErrInvalidSlug", name, slug, err)
+			}
+		}
+	}
+	if sent {
+		t.Error("a request reached CashPilot for an invalid slug")
+	}
+	for _, ok := range []string{"honeygain", "sentinel-dvpn", "proxybase-xyz", "earnfm", "a.b_c"} {
+		if err := ValidateSlug(ok); err != nil {
+			t.Errorf("ValidateSlug(%q) = %v, want nil", ok, err)
+		}
+	}
+}
+
+func TestTarget_sends_worker_id_and_instance(t *testing.T) {
+	srv, getReq := newCapturingServer(t, 200, `{}`)
 	c := NewClient(srv.URL, "")
 
-	_, err := c.GetServiceLogs(context.Background(), "my/service", 10)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	if _, err := c.StopService(context.Background(), "honeygain", Target{WorkerID: 3, Instance: 2}); err != nil {
+		t.Fatal(err)
 	}
-	req := getReq()
-	// url.PathEscape("my/service") = "my%2Fservice"
-	if !strings.Contains(req.URL.RawPath, "my%2Fservice") && !strings.Contains(req.RequestURI, "my%2Fservice") {
-		t.Errorf("slug not URL-encoded in path: raw=%q uri=%q", req.URL.RawPath, req.RequestURI)
+	q := getReq().URL.Query()
+	if q.Get("worker_id") != "3" || q.Get("instance") != "2" {
+		t.Errorf("query = %v, want worker_id=3 instance=2", q)
+	}
+
+	if _, err := c.RemoveService(context.Background(), "honeygain", Target{WorkerID: 4, Instance: 9}); err != nil {
+		t.Fatal(err)
+	}
+	q = getReq().URL.Query()
+	if q.Get("worker_id") != "4" || q.Has("instance") || q.Has("delete_volumes") {
+		t.Errorf("remove query = %v, want worker_id=4 only", q)
+	}
+
+	if _, err := c.StartService(context.Background(), "honeygain", Target{}); err != nil {
+		t.Fatal(err)
+	}
+	if raw := getReq().URL.RawQuery; raw != "" {
+		t.Errorf("zero Target sent %q, want no query", raw)
+	}
+}
+
+func TestGetCompose_and_health_scores_send_optional_params(t *testing.T) {
+	srv, getReq := newCapturingServer(t, 200, `[]`)
+	c := NewClient(srv.URL, "")
+
+	if _, err := c.GetCompose(context.Background(), "honeygain", "arm64"); err != nil {
+		t.Fatal(err)
+	}
+	if got := getReq().URL.Query().Get("arch"); got != "arm64" {
+		t.Errorf("arch = %q, want arm64", got)
+	}
+	if _, err := c.GetHealthScores(context.Background(), 30); err != nil {
+		t.Fatal(err)
+	}
+	if got := getReq().URL.Query().Get("days"); got != "30" {
+		t.Errorf("days = %q, want 30", got)
 	}
 }
 
@@ -523,7 +631,7 @@ func TestDoPost_returns_error_when_url_is_invalid(t *testing.T) {
 
 func TestRemoveService_returns_error_when_url_is_invalid(t *testing.T) {
 	c := NewClient("http://host\x7f:8080", "") // control char makes URL invalid
-	_, err := c.RemoveService(context.Background(), "test")
+	_, err := c.RemoveService(context.Background(), "test", Target{})
 	if err == nil {
 		t.Fatal("expected error for invalid URL in RemoveService")
 	}

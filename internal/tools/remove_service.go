@@ -11,13 +11,14 @@ import (
 
 // NewRemoveService builds the tool definition and handler.
 func NewRemoveService(c *client.Client) (mcp.Tool, server.ToolHandlerFunc) {
-
 	tool := mcp.NewTool("remove_service",
-		mcp.WithDescription("Remove a deployed service"),
-		mcp.WithString("slug",
-			mcp.Required(),
-			mcp.Description("Service slug to remove"),
-		),
+		append([]mcp.ToolOption{
+			mcp.WithDescription("Remove a deployed service from one worker: its containers are deleted and it stops earning. " +
+				"Volumes are kept, so node identities and wallets survive and a later deploy_service picks them up. " +
+				"Confirm with the user before calling."),
+			slugParam("Service to remove."),
+			workerParam(),
+		}, hints("Remove service", false, true, true, false)...)...,
 	)
 
 	handler := func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -25,15 +26,15 @@ func NewRemoveService(c *client.Client) (mcp.Tool, server.ToolHandlerFunc) {
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}
-
-		resp, err := c.RemoveService(ctx, slug)
+		t, err := target(req, false)
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}
-
-		return mcp.NewToolResultText(
-			fmt.Sprintf("Service %s removed. Response: %s", slug, string(resp)),
-		), nil
+		resp, err := c.RemoveService(ctx, slug, t)
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+		return mcp.NewToolResultText(fmt.Sprintf("Service %s removed (volumes kept). CashPilot answered: %s", slug, resp)), nil
 	}
 
 	return tool, handler

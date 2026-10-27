@@ -62,3 +62,12 @@ func TestGetEnv(t *testing.T) {
 		})
 	}
 }
+
+func TestLoadCashPilotConfig_ReadOnly(t *testing.T) {
+	for v, want := range map[string]bool{"": false, "0": false, "false": false, "no": false, "1": true, "true": true, "TRUE": true, "yes": true, " on ": true} {
+		t.Setenv("CASHPILOT_READ_ONLY", v)
+		if got := LoadCashPilotConfig().ReadOnly; got != want {
+			t.Errorf("CASHPILOT_READ_ONLY=%q: ReadOnly = %v, want %v", v, got, want)
+		}
+	}
+}
