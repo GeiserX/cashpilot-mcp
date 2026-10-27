@@ -16,13 +16,25 @@ func init() {
 type CashPilotConfig struct {
 	BaseURL string
 	APIKey  string
+	// ReadOnly hides every tool that changes the fleet (CASHPILOT_READ_ONLY).
+	ReadOnly bool
 }
 
 func LoadCashPilotConfig() CashPilotConfig {
 	return CashPilotConfig{
-		BaseURL: getEnv("CASHPILOT_URL", "http://localhost:8080"),  // NOTE: MCP HTTP listens on :8081 to avoid conflict
-		APIKey:  getEnv("CASHPILOT_API_KEY", ""),
+		// The MCP HTTP listener uses :8081, so it never collides with CashPilot's :8080.
+		BaseURL:  getEnv("CASHPILOT_URL", "http://localhost:8080"),
+		APIKey:   getEnv("CASHPILOT_API_KEY", ""),
+		ReadOnly: isTrue(os.Getenv("CASHPILOT_READ_ONLY")),
 	}
+}
+
+func isTrue(v string) bool {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "1", "true", "yes", "on":
+		return true
+	}
+	return false
 }
 
 func getEnv(k, d string) string {

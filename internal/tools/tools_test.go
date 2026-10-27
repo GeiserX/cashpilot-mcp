@@ -102,7 +102,7 @@ func TestGetEarningsDaily_respects_custom_days_parameter(t *testing.T) {
 	}
 }
 
-func TestGetEarningsDaily_clamps_days_to_365_maximum(t *testing.T) {
+func TestGetEarningsDaily_rejects_days_above_365(t *testing.T) {
 	srv := mockAPI(t, map[string]struct {
 		status int
 		body   string
@@ -118,12 +118,12 @@ func TestGetEarningsDaily_clamps_days_to_365_maximum(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	text := result.Content[0].(mcp.TextContent).Text
-	if !strings.Contains(text, "365 days") {
-		t.Errorf("expected clamped to 365 days, got: %s", text)
+	if !result.IsError || !strings.Contains(text, "between 1 and 365") {
+		t.Errorf("expected an out-of-range error, got: %s", text)
 	}
 }
 
-func TestGetEarningsDaily_ignores_negative_days_uses_default(t *testing.T) {
+func TestGetEarningsDaily_rejects_negative_days(t *testing.T) {
 	srv := mockAPI(t, map[string]struct {
 		status int
 		body   string
@@ -139,8 +139,8 @@ func TestGetEarningsDaily_ignores_negative_days_uses_default(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	text := result.Content[0].(mcp.TextContent).Text
-	if !strings.Contains(text, "7 days") {
-		t.Errorf("expected default 7 days for negative input, got: %s", text)
+	if !result.IsError || !strings.Contains(text, "between 1 and 365") {
+		t.Errorf("expected an out-of-range error, got: %s", text)
 	}
 }
 
@@ -284,7 +284,7 @@ func TestGetServiceLogs_respects_custom_lines_parameter(t *testing.T) {
 	}
 }
 
-func TestGetServiceLogs_clamps_lines_to_1000_maximum(t *testing.T) {
+func TestGetServiceLogs_rejects_lines_above_1000(t *testing.T) {
 	srv := mockAPI(t, map[string]struct {
 		status int
 		body   string
@@ -303,8 +303,8 @@ func TestGetServiceLogs_clamps_lines_to_1000_maximum(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	text := result.Content[0].(mcp.TextContent).Text
-	if !strings.Contains(text, "1000 lines") {
-		t.Errorf("expected clamped to 1000, got: %s", text)
+	if !result.IsError || !strings.Contains(text, "between 1 and 1000") {
+		t.Errorf("expected an out-of-range error, got: %s", text)
 	}
 }
 
@@ -366,7 +366,7 @@ func TestRestartService_returns_success_response(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	text := result.Content[0].(mcp.TextContent).Text
-	if !strings.Contains(text, "earnapp restarted") {
+	if !strings.Contains(text, "earnapp: restart requested") {
 		t.Errorf("expected restart confirmation, got: %s", text)
 	}
 }
@@ -429,7 +429,7 @@ func TestStopService_returns_success_response(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	text := result.Content[0].(mcp.TextContent).Text
-	if !strings.Contains(text, "peer2profit stopped") {
+	if !strings.Contains(text, "peer2profit: stop requested") {
 		t.Errorf("expected stop confirmation, got: %s", text)
 	}
 }
@@ -492,7 +492,7 @@ func TestStartService_returns_success_response(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	text := result.Content[0].(mcp.TextContent).Text
-	if !strings.Contains(text, "repocket started") {
+	if !strings.Contains(text, "repocket: start requested") {
 		t.Errorf("expected start confirmation, got: %s", text)
 	}
 }
@@ -618,7 +618,7 @@ func TestTriggerCollection_returns_success_response(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	text := result.Content[0].(mcp.TextContent).Text
-	if !strings.Contains(text, "Collection triggered") {
+	if !strings.Contains(text, "Collection started") {
 		t.Errorf("expected trigger confirmation, got: %s", text)
 	}
 }
@@ -663,7 +663,7 @@ func TestGetCompose_returns_compose_for_slug(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	text := result.Content[0].(mcp.TextContent).Text
-	if !strings.Contains(text, "Compose for honeygain") {
+	if !strings.Contains(text, "docker-compose.yml for honeygain") {
 		t.Errorf("expected compose header, got: %s", text)
 	}
 }
@@ -743,7 +743,7 @@ func TestDeployService_deploys_with_valid_env_json(t *testing.T) {
 
 	req := makeCallToolRequest("deploy_service", map[string]any{
 		"slug": "earnapp",
-		"env":  `{"TOKEN":"abc123"}`,
+		"env":  map[string]any{"TOKEN": "abc123"},
 	})
 	result, err := handler(context.Background(), req)
 	if err != nil {
@@ -770,17 +770,17 @@ func TestDeployService_returns_tool_error_for_invalid_env_json(t *testing.T) {
 
 	req := makeCallToolRequest("deploy_service", map[string]any{
 		"slug": "test",
-		"env":  `{invalid json`,
+		"env":  `{"TOKEN":"abc123"}`, // a JSON string, not an object
 	})
 	result, err := handler(context.Background(), req)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if !result.IsError {
-		t.Error("expected IsError=true for invalid env JSON")
+		t.Error("expected IsError=true for env passed as a string")
 	}
 	text := result.Content[0].(mcp.TextContent).Text
-	if !strings.Contains(text, "invalid env JSON") {
+	if !strings.Contains(text, "env must be an object") {
 		t.Errorf("expected error message about invalid JSON, got: %s", text)
 	}
 }

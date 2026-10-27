@@ -107,7 +107,7 @@ func modernMeta() map[string]any {
 }
 
 func testServer() *server.MCPServer {
-	return NewServer(client.NewClient("http://127.0.0.1:1", ""))
+	return NewServer(client.NewClient("http://127.0.0.1:1", ""), Options{})
 }
 
 func TestProtocol_modern_discover_lists_2026_07_28(t *testing.T) {

@@ -18,7 +18,10 @@ func main() {
 
 	cfg := config.LoadCashPilotConfig()
 	cp := client.NewClient(cfg.BaseURL, cfg.APIKey)
-	s := app.NewServer(cp)
+	s := app.NewServer(cp, app.Options{ReadOnly: cfg.ReadOnly})
+	if cfg.ReadOnly {
+		log.Println("read-only mode: tools that change the fleet are not registered")
+	}
 
 	if strings.ToLower(os.Getenv("TRANSPORT")) == "stdio" {
 		log.Println("CashPilot MCP bridge running on stdio")
