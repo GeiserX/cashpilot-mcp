@@ -5,7 +5,7 @@
 ```yaml
 services:
   cashpilot-mcp:
-    image: drumsergio/cashpilot-mcp:v0.3.1
+    image: drumsergio/cashpilot-mcp:v0.3.2
     ports:
       - "127.0.0.1:8081:8081"
     environment:
@@ -20,7 +20,7 @@ Inside a container the server has to listen on `0.0.0.0` for the published port 
 ## Docker (stdio)
 
 ```sh
-docker run -i --rm -e TRANSPORT=stdio -e CASHPILOT_URL=http://cashpilot:8080 -e CASHPILOT_API_KEY drumsergio/cashpilot-mcp:v0.3.1
+docker run -i --rm -e TRANSPORT=stdio -e CASHPILOT_URL=http://cashpilot:8080 -e CASHPILOT_API_KEY drumsergio/cashpilot-mcp:v0.3.2
 ```
 
 ## npm (stdio)
