@@ -50,7 +50,7 @@ func NewGetEarningsBreakdown(c *client.Client) (mcp.Tool, server.ToolHandlerFunc
 	return readTool{
 		name:  "get_earnings_breakdown",
 		title: "Earnings per service",
-		description: "One record per service: current balance, earnings and whether the balance has reached the provider's cashout minimum. " +
+		description: "One record per service: current balance, earnings and whether the balance has reached the provider's cashout minimum. Each balance is in the unit its currency field names (USD, a coin or points). " +
 			"Use it to answer which services earn most and what can be cashed out.",
 		field: "services", kind: "array", fieldDesc: "CashPilot /api/earnings/breakdown",
 		fetch: (*client.Client).GetEarningsBreakdown,
@@ -177,7 +177,7 @@ var periods = []string{"week", "month", "year", "all"}
 func NewGetEarningsHistory(c *client.Client) (mcp.Tool, server.ToolHandlerFunc) {
 	tool := mcp.NewTool("get_earnings_history",
 		append([]mcp.ToolOption{
-			mcp.WithDescription("Earnings records per service and collection over a period, in USD. " +
+			mcp.WithDescription("Earnings records per service and collection over a period. Each balance is in the unit its currency field names (USD, a coin or points). " +
 				"Use it to see how one service's balance moved; for daily totals use get_earnings_daily."),
 			mcp.WithString("period",
 				mcp.Required(),
