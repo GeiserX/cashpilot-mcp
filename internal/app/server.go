@@ -27,7 +27,7 @@ type Options struct {
 	ReadOnly bool
 }
 
-const instructions = `CashPilot runs passive-income and bandwidth-sharing services (Honeygain, EarnApp, Mysterium, ...) as containers on one or more workers and collects their earnings. Amounts are USD.
+const instructions = `CashPilot runs passive-income and bandwidth-sharing services (Honeygain, EarnApp, Mysterium, ...) as containers on one or more workers and collects their earnings. Totals (get_earnings_summary, get_earnings_daily) are USD. A per-service balance is in that service's own unit (USD, a coin such as MYST or BTC, or points), named by its currency field. Read each balance in the unit its currency field names, and never assume USD.
 
 - Earnings: get_earnings_summary for totals, get_earnings_breakdown per service and cashout eligibility, get_earnings_daily for a series.
 - Services are named by catalog slug (lowercase, e.g. "honeygain"). list_deployed_services shows what runs where; list_available_services shows what can be deployed and which env keys each needs.

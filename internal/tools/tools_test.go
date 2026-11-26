@@ -824,6 +824,108 @@ func TestDeployService_returns_tool_error_on_api_failure(t *testing.T) {
 	}
 }
 
+func TestDeployService_explains_the_confirmation_cashpilot_3_asks_for(t *testing.T) {
+	// The web dashboard's 409 for a redeploy (app/main.py _ask_deploy_confirmation).
+	confirm := `{"detail":{"error":"confirm_deploy_targets",` +
+		`"message":"Replace these containers for honeygain on box-1?\n\nInstance 1 (0123456789ab)",` +
+		`"expected_containers":{"p3":"abcdef0123456789","2":"0123456789abcdef","1":"fedcba9876543210","4":"none"}}}`
+	// The worker's refusal, as the dashboard forwards it (_safe_worker_detail).
+	changed := `{"detail":{"error":"deploy_target_changed",` +
+		`"message":"The container changed or needs approval. Review it and use Redeploy.","current_container":"0123456789abcdef"}}`
+	cases := []struct {
+		name, body string
+		copies     string
+	}{
+		{"confirm_deploy_targets", confirm,
+			": instance 1 (container fedcba987654), instance 2 (container 0123456789ab), proxied copy 3 (container abcdef012345)."},
+		{"deploy_target_changed", changed, "so this deploy would replace it: container 0123456789ab. "},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			srv := mockAPI(t, map[string]struct {
+				status int
+				body   string
+			}{
+				"POST /api/deploy/honeygain": {409, tc.body},
+			})
+			_, handler := NewDeployService(client.NewClient(srv.URL, ""))
+
+			result, err := handler(context.Background(), makeCallToolRequest("deploy_service", map[string]any{"slug": "honeygain"}))
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if !result.IsError {
+				t.Fatal("a refused deploy must be a tool error")
+			}
+			text := result.Content[0].(mcp.TextContent).Text
+			for _, want := range []string{
+				"honeygain already has a container on this worker",
+				tc.copies,
+				"CashPilot asks the owner to confirm",
+				"This tool cannot give that confirmation",
+				"open the CashPilot dashboard and redeploy honeygain",
+				"The settings sent in this call may not be saved",
+			} {
+				if !strings.Contains(text, want) {
+					t.Errorf("text lacks %q:\n%s", want, text)
+				}
+			}
+			if strings.Contains(text, "rejected as invalid") || strings.Contains(text, "container none") {
+				t.Errorf("text = %s", text)
+			}
+		})
+	}
+}
+
+func TestDeployService_passes_other_conflicts_through(t *testing.T) {
+	cases := []struct {
+		name   string
+		status int
+		body   string
+		want   string
+	}{
+		{"409 with a plain detail", 409,
+			`{"detail":"A container already exists. Update the worker so CashPilot can identify it before replacing it."}`,
+			"CashPilot answered 409: A container already exists. Update the worker so CashPilot can identify it before replacing it."},
+		// Only a 409 carries the confirmation; the same code on another status passes through.
+		{"400 with a refusal code", 400,
+			`{"detail":{"error":"deploy_target_changed","message":"refused","current_container":"0123456789abcdef"}}`,
+			"CashPilot answered 400: refused (deploy_target_changed)"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			srv := mockAPI(t, map[string]struct {
+				status int
+				body   string
+			}{
+				"POST /api/deploy/honeygain": {tc.status, tc.body},
+			})
+			_, handler := NewDeployService(client.NewClient(srv.URL, ""))
+
+			result, err := handler(context.Background(), makeCallToolRequest("deploy_service", map[string]any{"slug": "honeygain"}))
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			text := result.Content[0].(mcp.TextContent).Text
+			if !result.IsError || text != tc.want {
+				t.Errorf("IsError = %v, text = %q; want %q", result.IsError, text, tc.want)
+			}
+		})
+	}
+}
+
+func TestDeployService_description_states_the_3_0_confirmation(t *testing.T) {
+	tool, _ := NewDeployService(client.NewClient("http://localhost", ""))
+	if strings.Contains(tool.Description, "redeploys it with the new settings;") {
+		t.Errorf("description still promises a one-call redeploy: %s", tool.Description)
+	}
+	for _, want := range []string{"CashPilot 3.0", "confirms it in the CashPilot dashboard", "This tool cannot confirm"} {
+		if !strings.Contains(tool.Description, want) {
+			t.Errorf("description lacks %q: %s", want, tool.Description)
+		}
+	}
+}
+
 // ---------------------------------------------------------------------------
 // Tool definition checks
 // ---------------------------------------------------------------------------

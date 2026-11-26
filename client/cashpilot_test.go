@@ -179,6 +179,119 @@ func TestDo_never_echoes_a_non_json_error_body(t *testing.T) {
 	}
 }
 
+// The 409 the web dashboard answers when a deploy would replace a running
+// container (CashPilot 3.0, app/main.py _ask_deploy_confirmation).
+const confirmDeployTargetsBody = `{"detail":{"error":"confirm_deploy_targets",` +
+	`"message":"Replace these containers for honeygain on box-1?\n\nInstance 1 (0123456789ab)\nProxied copy 3 (abcdef012345)",` +
+	`"expected_containers":{"1":"0123456789abcdef","2":"none","p3":"abcdef0123456789","../x":"0123456789ab","4":"NOT-AN-ID"}}}`
+
+func TestDo_reads_message_and_code_of_a_confirm_deploy_targets_detail(t *testing.T) {
+	srv, _ := newCapturingServer(t, 409, confirmDeployTargetsBody)
+	c := NewClient(srv.URL, "")
+
+	_, err := c.DeployService(context.Background(), "honeygain", []byte(`{}`), Target{})
+	var apiErr *APIError
+	if !errors.As(err, &apiErr) {
+		t.Fatalf("err = %v, want an *APIError", err)
+	}
+	if apiErr.Code != CodeConfirmDeployTargets {
+		t.Errorf("Code = %q, want %q", apiErr.Code, CodeConfirmDeployTargets)
+	}
+	wantDetail := "Replace these containers for honeygain on box-1? Instance 1 (0123456789ab) Proxied copy 3 (abcdef012345)"
+	if apiErr.Detail != wantDetail {
+		t.Errorf("Detail = %q, want %q", apiErr.Detail, wantDetail)
+	}
+	want := map[string]string{"1": "0123456789abcdef", "2": "none", "p3": "abcdef0123456789"}
+	if len(apiErr.Containers) != len(want) {
+		t.Fatalf("Containers = %v, want %v", apiErr.Containers, want)
+	}
+	for k, v := range want {
+		if apiErr.Containers[k] != v {
+			t.Errorf("Containers[%q] = %q, want %q", k, apiErr.Containers[k], v)
+		}
+	}
+	msg := err.Error()
+	if !strings.Contains(msg, wantDetail+" (confirm_deploy_targets)") {
+		t.Errorf("error = %q, want the message and the code", msg)
+	}
+	if strings.Contains(msg, "rejected as invalid") || strings.Contains(msg, "{") {
+		t.Errorf("error = %q, still reads the dict detail as noise", msg)
+	}
+}
+
+func TestDo_reads_message_and_code_of_a_deploy_target_changed_detail(t *testing.T) {
+	// The worker's refusal as the web dashboard forwards it (_safe_worker_detail).
+	body := `{"detail":{"error":"deploy_target_changed",` +
+		`"message":"The container changed or needs approval. Review it and use Redeploy.",` +
+		`"current_container":"0123456789abcdef"}}`
+	srv, _ := newCapturingServer(t, 409, body)
+	c := NewClient(srv.URL, "")
+
+	_, err := c.DeployService(context.Background(), "honeygain", []byte(`{}`), Target{})
+	var apiErr *APIError
+	if !errors.As(err, &apiErr) {
+		t.Fatalf("err = %v, want an *APIError", err)
+	}
+	if apiErr.Code != CodeDeployTargetChanged || apiErr.Containers != nil || apiErr.Current != "0123456789abcdef" {
+		t.Errorf("Code = %q, Containers = %v, Current = %q", apiErr.Code, apiErr.Containers, apiErr.Current)
+	}
+	want := "CashPilot answered 409: The container changed or needs approval. Review it and use Redeploy. (deploy_target_changed)"
+	if err.Error() != want {
+		t.Errorf("error = %q, want %q", err.Error(), want)
+	}
+}
+
+func TestDo_drops_a_current_container_that_is_not_an_id(t *testing.T) {
+	for _, current := range []string{`"../etc"`, `"0123ABCDEF"`, `123`, `null`} {
+		body := `{"detail":{"error":"deploy_target_changed","message":"m","current_container":` + current + `}}`
+		srv, _ := newCapturingServer(t, 409, body)
+		c := NewClient(srv.URL, "")
+		_, err := c.DeployService(context.Background(), "honeygain", []byte(`{}`), Target{})
+		var apiErr *APIError
+		if !errors.As(err, &apiErr) {
+			t.Fatalf("err = %v, want an *APIError", err)
+		}
+		if apiErr.Current != "" {
+			t.Errorf("current_container %s: Current = %q, want empty", current, apiErr.Current)
+		}
+	}
+	// current_container belongs to deploy_target_changed only.
+	body := `{"detail":{"error":"confirm_deploy_targets","message":"m","current_container":"0123456789abcdef"}}`
+	srv, _ := newCapturingServer(t, 409, body)
+	_, err := NewClient(srv.URL, "").DeployService(context.Background(), "honeygain", []byte(`{}`), Target{})
+	var apiErr *APIError
+	if !errors.As(err, &apiErr) || apiErr.Current != "" {
+		t.Errorf("err = %v, want an *APIError with no Current", err)
+	}
+}
+
+func TestDo_dict_details_without_a_usable_message(t *testing.T) {
+	cases := []struct {
+		name, body, wantDetail, wantCode string
+	}{
+		{"code only", `{"detail":{"error":"copy_not_found"}}`, "copy_not_found", "copy_not_found"},
+		{"empty message falls back to the code", `{"detail":{"error":"route_locked","message":""}}`, "route_locked", "route_locked"},
+		{"non-string fields", `{"detail":{"error":["x"],"message":{"a":1}}}`, "the request was rejected as invalid", ""},
+		{"code that is not a code", `{"detail":{"error":"<b>evil</b>","message":"refused"}}`, "refused", ""},
+		{"validation array", `{"detail":[{"loc":["body","env"],"msg":"bad"}]}`, "the request was rejected as invalid", ""},
+		{"plain string", `{"detail":"Missing required fields: EMAIL"}`, "Missing required fields: EMAIL", ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			srv, _ := newCapturingServer(t, 400, tc.body)
+			c := NewClient(srv.URL, "")
+			_, err := c.GetEarningsSummary(context.Background())
+			var apiErr *APIError
+			if !errors.As(err, &apiErr) {
+				t.Fatalf("err = %v, want an *APIError", err)
+			}
+			if apiErr.Detail != tc.wantDetail || apiErr.Code != tc.wantCode {
+				t.Errorf("Detail, Code = %q, %q; want %q, %q", apiErr.Detail, apiErr.Code, tc.wantDetail, tc.wantCode)
+			}
+		})
+	}
+}
+
 func TestDo_adds_worker_hint_when_several_workers_are_online(t *testing.T) {
 	srv, _ := newCapturingServer(t, 400, `{"detail":"worker_id is required (multiple workers online)"}`)
 	c := NewClient(srv.URL, "")

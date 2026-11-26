@@ -102,7 +102,7 @@ Docker, the HTTP server and local builds are in [Getting started](https://github
 | `trigger_collection` | Collect earnings now, in the background | yes |
 | `start_service` / `restart_service` | Start or restart a container | yes |
 | `stop_service` | Stop a container; it stops earning | yes, destructive |
-| `deploy_service` | Deploy or redeploy with env, hostname, instances | yes, destructive |
+| `deploy_service` | Deploy with env, hostname, instances; on CashPilot 3.0+ a redeploy needs the owner's confirmation in the dashboard | yes, destructive |
 | `remove_service` | Remove a deployment; volumes are kept | yes, destructive |
 
 With more than one worker online, service tools need `worker_id` (from `list_workers`). Resources and details are in [Usage](https://github.com/GeiserX/cashpilot-mcp/blob/main/docs/usage.md).

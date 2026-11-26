@@ -376,3 +376,12 @@ func TestProtocol_cache_hints_and_identity(t *testing.T) {
 		t.Errorf("discover identity incomplete: %s", r.Result)
 	}
 }
+
+func TestInstructions_do_not_call_every_amount_usd(t *testing.T) {
+	if strings.Contains(instructions, "Amounts are USD") {
+		t.Error("instructions claim every amount is USD; per-service balances can be coins or points")
+	}
+	if !strings.Contains(instructions, "currency field") {
+		t.Error("instructions should point at the currency field")
+	}
+}

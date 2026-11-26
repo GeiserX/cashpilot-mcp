@@ -25,6 +25,10 @@ const (
 	maxErrorBytes = 8 << 10
 	// maxDetailRunes caps the upstream detail quoted back to the model.
 	maxDetailRunes = 300
+	// maxReportedCopies caps the containers kept from one refusal.
+	maxReportedCopies = 32
+	// invalidRequestText stands in for a detail that cannot be shown.
+	invalidRequestText = "the request was rejected as invalid"
 )
 
 // slugPattern matches every CashPilot catalog slug (honeygain, sentinel-dvpn,
@@ -66,12 +70,35 @@ func (t Target) apply(q url.Values) {
 type APIError struct {
 	Status int
 	Detail string
+	// Code is the "error" field of a structured detail, e.g.
+	// confirm_deploy_targets; empty for a plain-string detail.
+	Code string
+	// Containers is the "expected_containers" map of a confirm_deploy_targets
+	// answer: copy key ("1", "2", "p3" for a proxied copy) to container id.
+	Containers map[string]string
+	// Current is the "current_container" of a deploy_target_changed answer:
+	// the id of the container the worker found where the deploy expected none.
+	Current string
 }
+
+// The deploy refusals CashPilot 3.0 answers when a deploy would replace a
+// container that already exists on the worker.
+const (
+	// CodeConfirmDeployTargets: the dashboard asks the owner to confirm the
+	// replacement (web app/main.py _ask_deploy_confirmation).
+	CodeConfirmDeployTargets = "confirm_deploy_targets"
+	// CodeDeployTargetChanged: the worker found a container where the deploy
+	// expected none (web app/main.py _safe_worker_detail).
+	CodeDeployTargetChanged = "deploy_target_changed"
+)
 
 func (e *APIError) Error() string {
 	msg := fmt.Sprintf("CashPilot answered %d", e.Status)
 	if e.Detail != "" {
 		msg += ": " + e.Detail
+		if e.Code != "" && e.Code != e.Detail {
+			msg += " (" + e.Code + ")"
+		}
 	} else if t := http.StatusText(e.Status); t != "" {
 		msg += " " + t
 	}
@@ -124,7 +151,9 @@ func (c *Client) do(hc *http.Client, req *http.Request) ([]byte, error) {
 	defer resp.Body.Close()
 	if resp.StatusCode >= 400 {
 		b, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorBytes))
-		return nil, &APIError{Status: resp.StatusCode, Detail: detailOf(b)}
+		apiErr := &APIError{Status: resp.StatusCode}
+		detailOf(b, apiErr)
+		return nil, apiErr
 	}
 	b, err := io.ReadAll(io.LimitReader(resp.Body, MaxResponseBytes+1))
 	if err != nil {
@@ -150,29 +179,104 @@ func transportError(ctx context.Context, err error) error {
 	return errors.New("could not reach CashPilot: check CASHPILOT_URL and that the instance is running")
 }
 
-// detailOf pulls FastAPI's {"detail": "..."} out of an error body. Anything
+// codePattern and the two below accept only the shapes CashPilot sends, so
+// nothing else from an error body reaches the model.
+var (
+	codePattern        = regexp.MustCompile(`^[a-z][a-z0-9_]{0,63}$`)
+	copyKeyPattern     = regexp.MustCompile(`^p?[0-9]{1,4}$`)
+	containerIDPattern = regexp.MustCompile(`^(none|[0-9a-f]{12,64})$`)
+)
+
+// detailOf pulls FastAPI's detail out of an error body. A string detail is
+// quoted. A dict detail, as CashPilot 3.0 sends for its structured refusals
+// ({"error": "...", "message": "...", ...}), gives its message, its error code
+// and the containers it is about: expected_containers for
+// confirm_deploy_targets, current_container for deploy_target_changed. Anything
 // else (HTML, validation arrays) is dropped rather than echoed.
-func detailOf(body []byte) string {
+func detailOf(body []byte, e *APIError) {
 	var v struct {
 		Detail json.RawMessage `json:"detail"`
 	}
 	if json.Unmarshal(body, &v) != nil || len(v.Detail) == 0 {
-		return ""
+		return
 	}
 	var s string
-	if json.Unmarshal(v.Detail, &s) != nil {
-		return "the request was rejected as invalid"
+	if json.Unmarshal(v.Detail, &s) == nil {
+		e.Detail = cleanDetail(s)
+		return
 	}
+	var d struct {
+		Error      json.RawMessage `json:"error"`
+		Message    json.RawMessage `json:"message"`
+		Containers json.RawMessage `json:"expected_containers"`
+		Current    json.RawMessage `json:"current_container"`
+	}
+	if json.Unmarshal(v.Detail, &d) != nil {
+		e.Detail = invalidRequestText
+		return
+	}
+	var msg, code string
+	_ = json.Unmarshal(d.Message, &msg) // a non-string message is dropped
+	_ = json.Unmarshal(d.Error, &code)
+	if !codePattern.MatchString(code) {
+		code = ""
+	}
+	switch code {
+	case CodeConfirmDeployTargets:
+		e.Containers = containersOf(d.Containers)
+	case CodeDeployTargetChanged:
+		var id string
+		if json.Unmarshal(d.Current, &id) == nil && containerIDPattern.MatchString(id) {
+			e.Current = id
+		}
+	}
+	e.Code = code
+	e.Detail = cleanDetail(msg)
+	if e.Detail == "" {
+		e.Detail = code
+	}
+	if e.Detail == "" {
+		e.Detail = invalidRequestText
+	}
+}
+
+// containersOf keeps the copy-to-container pairs of expected_containers that
+// look like CashPilot's own, at most maxReportedCopies of them.
+func containersOf(raw json.RawMessage) map[string]string {
+	var in map[string]json.RawMessage
+	if json.Unmarshal(raw, &in) != nil {
+		return nil
+	}
+	out := map[string]string{}
+	for k, rv := range in {
+		var id string
+		if json.Unmarshal(rv, &id) != nil || !copyKeyPattern.MatchString(k) || !containerIDPattern.MatchString(id) {
+			continue
+		}
+		if len(out) == maxReportedCopies {
+			break
+		}
+		out[k] = id
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+// cleanDetail puts an upstream text on one line and caps its length.
+func cleanDetail(s string) string {
 	s = strings.Map(func(r rune) rune {
 		if unicode.IsControl(r) {
 			return ' '
 		}
 		return r
 	}, s)
+	s = strings.Join(strings.Fields(s), " ")
 	if r := []rune(s); len(r) > maxDetailRunes {
 		s = string(r[:maxDetailRunes]) + "…"
 	}
-	return strings.TrimSpace(s)
+	return s
 }
 
 func (c *Client) send(ctx context.Context, hc *http.Client, method, path string, q url.Values, body []byte) ([]byte, error) {
