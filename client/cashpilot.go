@@ -76,6 +76,9 @@ type APIError struct {
 	// Containers is the "expected_containers" map of a confirm_deploy_targets
 	// answer: copy key ("1", "2", "p3" for a proxied copy) to container id.
 	Containers map[string]string
+	// Current is the "current_container" of a deploy_target_changed answer:
+	// the id of the container the worker found where the deploy expected none.
+	Current string
 }
 
 // The deploy refusals CashPilot 3.0 answers when a deploy would replace a
@@ -149,7 +152,7 @@ func (c *Client) do(hc *http.Client, req *http.Request) ([]byte, error) {
 	if resp.StatusCode >= 400 {
 		b, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorBytes))
 		apiErr := &APIError{Status: resp.StatusCode}
-		apiErr.Detail, apiErr.Code, apiErr.Containers = detailOf(b)
+		detailOf(b, apiErr)
 		return nil, apiErr
 	}
 	b, err := io.ReadAll(io.LimitReader(resp.Body, MaxResponseBytes+1))
@@ -187,44 +190,54 @@ var (
 // detailOf pulls FastAPI's detail out of an error body. A string detail is
 // quoted. A dict detail, as CashPilot 3.0 sends for its structured refusals
 // ({"error": "...", "message": "...", ...}), gives its message, its error code
-// and, for confirm_deploy_targets, the containers it would replace. Anything
+// and the containers it is about: expected_containers for
+// confirm_deploy_targets, current_container for deploy_target_changed. Anything
 // else (HTML, validation arrays) is dropped rather than echoed.
-func detailOf(body []byte) (detail, code string, containers map[string]string) {
+func detailOf(body []byte, e *APIError) {
 	var v struct {
 		Detail json.RawMessage `json:"detail"`
 	}
 	if json.Unmarshal(body, &v) != nil || len(v.Detail) == 0 {
-		return "", "", nil
+		return
 	}
 	var s string
 	if json.Unmarshal(v.Detail, &s) == nil {
-		return cleanDetail(s), "", nil
+		e.Detail = cleanDetail(s)
+		return
 	}
 	var d struct {
 		Error      json.RawMessage `json:"error"`
 		Message    json.RawMessage `json:"message"`
 		Containers json.RawMessage `json:"expected_containers"`
+		Current    json.RawMessage `json:"current_container"`
 	}
 	if json.Unmarshal(v.Detail, &d) != nil {
-		return invalidRequestText, "", nil
+		e.Detail = invalidRequestText
+		return
 	}
-	var msg string
+	var msg, code string
 	_ = json.Unmarshal(d.Message, &msg) // a non-string message is dropped
 	_ = json.Unmarshal(d.Error, &code)
 	if !codePattern.MatchString(code) {
 		code = ""
 	}
-	if code == CodeConfirmDeployTargets {
-		containers = containersOf(d.Containers)
+	switch code {
+	case CodeConfirmDeployTargets:
+		e.Containers = containersOf(d.Containers)
+	case CodeDeployTargetChanged:
+		var id string
+		if json.Unmarshal(d.Current, &id) == nil && containerIDPattern.MatchString(id) {
+			e.Current = id
+		}
 	}
-	detail = cleanDetail(msg)
-	if detail == "" {
-		detail = code
+	e.Code = code
+	e.Detail = cleanDetail(msg)
+	if e.Detail == "" {
+		e.Detail = code
 	}
-	if detail == "" {
-		detail = invalidRequestText
+	if e.Detail == "" {
+		e.Detail = invalidRequestText
 	}
-	return detail, code, containers
 }
 
 // containersOf keeps the copy-to-container pairs of expected_containers that

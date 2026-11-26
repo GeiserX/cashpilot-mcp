@@ -232,12 +232,36 @@ func TestDo_reads_message_and_code_of_a_deploy_target_changed_detail(t *testing.
 	if !errors.As(err, &apiErr) {
 		t.Fatalf("err = %v, want an *APIError", err)
 	}
-	if apiErr.Code != CodeDeployTargetChanged || apiErr.Containers != nil {
-		t.Errorf("Code = %q, Containers = %v", apiErr.Code, apiErr.Containers)
+	if apiErr.Code != CodeDeployTargetChanged || apiErr.Containers != nil || apiErr.Current != "0123456789abcdef" {
+		t.Errorf("Code = %q, Containers = %v, Current = %q", apiErr.Code, apiErr.Containers, apiErr.Current)
 	}
 	want := "CashPilot answered 409: The container changed or needs approval. Review it and use Redeploy. (deploy_target_changed)"
 	if err.Error() != want {
 		t.Errorf("error = %q, want %q", err.Error(), want)
+	}
+}
+
+func TestDo_drops_a_current_container_that_is_not_an_id(t *testing.T) {
+	for _, current := range []string{`"../etc"`, `"0123ABCDEF"`, `123`, `null`} {
+		body := `{"detail":{"error":"deploy_target_changed","message":"m","current_container":` + current + `}}`
+		srv, _ := newCapturingServer(t, 409, body)
+		c := NewClient(srv.URL, "")
+		_, err := c.DeployService(context.Background(), "honeygain", []byte(`{}`), Target{})
+		var apiErr *APIError
+		if !errors.As(err, &apiErr) {
+			t.Fatalf("err = %v, want an *APIError", err)
+		}
+		if apiErr.Current != "" {
+			t.Errorf("current_container %s: Current = %q, want empty", current, apiErr.Current)
+		}
+	}
+	// current_container belongs to deploy_target_changed only.
+	body := `{"detail":{"error":"confirm_deploy_targets","message":"m","current_container":"0123456789abcdef"}}`
+	srv, _ := newCapturingServer(t, 409, body)
+	_, err := NewClient(srv.URL, "").DeployService(context.Background(), "honeygain", []byte(`{}`), Target{})
+	var apiErr *APIError
+	if !errors.As(err, &apiErr) || apiErr.Current != "" {
+		t.Errorf("err = %v, want an *APIError with no Current", err)
 	}
 }
 

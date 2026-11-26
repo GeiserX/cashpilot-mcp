@@ -838,7 +838,7 @@ func TestDeployService_explains_the_confirmation_cashpilot_3_asks_for(t *testing
 	}{
 		{"confirm_deploy_targets", confirm,
 			": instance 1 (container fedcba987654), instance 2 (container 0123456789ab), proxied copy 3 (container abcdef012345)."},
-		{"deploy_target_changed", changed, "so this deploy would replace it. "},
+		{"deploy_target_changed", changed, "so this deploy would replace it: container 0123456789ab. "},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -864,6 +864,7 @@ func TestDeployService_explains_the_confirmation_cashpilot_3_asks_for(t *testing
 				"CashPilot asks the owner to confirm",
 				"This tool cannot give that confirmation",
 				"open the CashPilot dashboard and redeploy honeygain",
+				"The settings sent in this call may not be saved",
 			} {
 				if !strings.Contains(text, want) {
 					t.Errorf("text lacks %q:\n%s", want, text)
@@ -877,22 +878,39 @@ func TestDeployService_explains_the_confirmation_cashpilot_3_asks_for(t *testing
 }
 
 func TestDeployService_passes_other_conflicts_through(t *testing.T) {
-	srv := mockAPI(t, map[string]struct {
+	cases := []struct {
+		name   string
 		status int
 		body   string
+		want   string
 	}{
-		"POST /api/deploy/honeygain": {409, `{"detail":"A container already exists. Update the worker so CashPilot can identify it before replacing it."}`},
-	})
-	_, handler := NewDeployService(client.NewClient(srv.URL, ""))
-
-	result, err := handler(context.Background(), makeCallToolRequest("deploy_service", map[string]any{"slug": "honeygain"}))
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		{"409 with a plain detail", 409,
+			`{"detail":"A container already exists. Update the worker so CashPilot can identify it before replacing it."}`,
+			"CashPilot answered 409: A container already exists. Update the worker so CashPilot can identify it before replacing it."},
+		// Only a 409 carries the confirmation; the same code on another status passes through.
+		{"400 with a refusal code", 400,
+			`{"detail":{"error":"deploy_target_changed","message":"refused","current_container":"0123456789abcdef"}}`,
+			"CashPilot answered 400: refused (deploy_target_changed)"},
 	}
-	text := result.Content[0].(mcp.TextContent).Text
-	want := "CashPilot answered 409: A container already exists. Update the worker so CashPilot can identify it before replacing it."
-	if !result.IsError || text != want {
-		t.Errorf("IsError = %v, text = %q; want %q", result.IsError, text, want)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			srv := mockAPI(t, map[string]struct {
+				status int
+				body   string
+			}{
+				"POST /api/deploy/honeygain": {tc.status, tc.body},
+			})
+			_, handler := NewDeployService(client.NewClient(srv.URL, ""))
+
+			result, err := handler(context.Background(), makeCallToolRequest("deploy_service", map[string]any{"slug": "honeygain"}))
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			text := result.Content[0].(mcp.TextContent).Text
+			if !result.IsError || text != tc.want {
+				t.Errorf("IsError = %v, text = %q; want %q", result.IsError, text, tc.want)
+			}
+		})
 	}
 }
 

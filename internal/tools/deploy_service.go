@@ -110,10 +110,13 @@ func needsApproval(slug string, err error) (string, bool) {
 	fmt.Fprintf(&b, "%s already has a container on this worker, so this deploy would replace it", slug)
 	if copies := describeCopies(apiErr.Containers); copies != "" {
 		b.WriteString(": " + copies)
+	} else if id := apiErr.Current; id != "" && id != "none" {
+		b.WriteString(": container " + shortID(id))
 	}
-	b.WriteString(". CashPilot asks the owner to confirm before it replaces a running container, so it stopped before replacing it. " +
+	b.WriteString(". CashPilot asks the owner to confirm before it replaces a running container, so it did not replace it. " +
 		"This tool cannot give that confirmation. Tell the owner to open the CashPilot dashboard and redeploy " + slug +
-		" there: the dashboard shows the containers it will replace and asks them to confirm. ")
+		" there: the dashboard shows the containers it will replace and asks them to confirm. " +
+		"The settings sent in this call may not be saved, so the owner should enter them again in the dashboard (env keys, hostname, instances). ")
 	b.WriteString("CashPilot answered: " + apiErr.Detail)
 	return b.String(), true
 }
@@ -138,10 +141,7 @@ func describeCopies(containers map[string]string) string {
 	})
 	parts := make([]string, 0, len(keys))
 	for _, k := range keys {
-		id := containers[k]
-		if len(id) > 12 {
-			id = id[:12]
-		}
+		id := shortID(containers[k])
 		if n, ok := strings.CutPrefix(k, "p"); ok {
 			parts = append(parts, fmt.Sprintf("proxied copy %s (container %s)", n, id))
 		} else {
@@ -149,4 +149,12 @@ func describeCopies(containers map[string]string) string {
 		}
 	}
 	return strings.Join(parts, ", ")
+}
+
+// shortID is the 12-character form of a container id the dashboard shows.
+func shortID(id string) string {
+	if len(id) > 12 {
+		return id[:12]
+	}
+	return id
 }
