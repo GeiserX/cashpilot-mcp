@@ -118,13 +118,22 @@ func (e *APIError) Error() string {
 		msg += ". This API key's role does not allow this call."
 	case e.Status == http.StatusBadRequest && strings.Contains(e.Detail, "worker_id"):
 		msg += ". Pass worker_id; list_workers shows the ids."
-	case e.Status == http.StatusNotFound && strings.Contains(strings.ToLower(e.Detail), "worker"):
-		// "Worker not found", "Unknown worker 7", "No such worker, ...".
+	case e.Status == http.StatusNotFound && isWorkerNotFound(e.Detail):
 		msg += ". Check worker_id with list_workers."
 	case e.Status == http.StatusNotFound:
 		msg += ". Check the slug with list_deployed_services or list_available_services."
 	}
 	return msg
+}
+
+// isWorkerNotFound matches CashPilot's worker 404s by their start: "Worker not
+// found", "Unknown worker 7" and "No such worker, ..." (app/main.py). A service
+// 404 such as "Service 'worker' not found" must fall through to the slug hint.
+func isWorkerNotFound(detail string) bool {
+	d := strings.ToLower(detail)
+	return strings.HasPrefix(d, "worker not found") ||
+		strings.HasPrefix(d, "unknown worker") ||
+		strings.HasPrefix(d, "no such worker")
 }
 
 type Client struct {

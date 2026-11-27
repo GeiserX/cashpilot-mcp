@@ -187,6 +187,10 @@ func TestDo_hint_matches_the_refusal(t *testing.T) {
 			"Check worker_id with list_workers.", "Check the slug"},
 		{"unknown service", `{"detail":"Service 'nope' not found"}`, 404,
 			"Check the slug with list_deployed_services or list_available_services.", "list_workers"},
+		{"service named worker", `{"detail":"Service 'worker' not found"}`, 404,
+			"Check the slug with list_deployed_services or list_available_services.", "list_workers"},
+		{"worker that cannot run containers", `{"detail":"No such worker, or it cannot run containers."}`, 404,
+			"Check worker_id with list_workers.", "Check the slug"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
