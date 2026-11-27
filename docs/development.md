@@ -21,7 +21,7 @@ CashPilot-MCP follows the [Contributor Covenant](http://contributor-covenant.org
 
 ## Credits
 
-[CashPilot](https://github.com/GeiserX/CashPilot) -- passive income fleet management dashboard
+[CashPilot](https://github.com/GeiserX/CashPilot) -- self-hosted dashboard for every earner and every box
 
 [MCP-GO](https://github.com/mark3labs/mcp-go) -- modern MCP implementation
 

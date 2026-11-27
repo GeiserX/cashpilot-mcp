@@ -20,3 +20,4 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
           repository: drumsergio/cashpilot-mcp
+          short-description: "Every earner, every box, one view, for AI agents: MCP server for your CashPilot dashboard"

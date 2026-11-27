@@ -10,11 +10,11 @@
   <a href="https://hub.docker.com/r/drumsergio/cashpilot-mcp"><img src="https://img.shields.io/docker/pulls/drumsergio/cashpilot-mcp?style=flat-square&logo=docker" alt="Docker Pulls"/></a>
   <a href="https://github.com/GeiserX/cashpilot-mcp/stargazers"><img src="https://img.shields.io/github/stars/GeiserX/cashpilot-mcp?style=flat-square&logo=github" alt="GitHub Stars"/></a>
   <a href="https://github.com/GeiserX/cashpilot-mcp/blob/main/LICENSE"><img src="https://img.shields.io/github/license/GeiserX/cashpilot-mcp?style=flat-square" alt="License"/></a>
-  <a href="https://cashpilot.club"><img src="https://img.shields.io/badge/website-cashpilot.club-blue?style=flat-square" alt="Website"/></a>
-  <a href="https://x.com/CashPilotClub"><img src="https://img.shields.io/badge/X-%40CashPilotClub-000000?style=flat-square&logo=x" alt="X"/></a>
 </p>
 
-<p align="center"><strong>A tiny bridge that exposes any CashPilot instance as an MCP server, enabling LLMs to monitor passive income earnings, manage services, and control fleet workers.</strong></p>
+<p align="center"><strong>Every earner, every box, one view, for your AI agent.</strong><br><a href="https://cashpilot.club">cashpilot.club</a> · <a href="https://x.com/CashPilotClub">@CashPilotClub on X</a></p>
+
+A small bridge that exposes any CashPilot instance as an MCP server. CashPilot is the self-hosted dashboard for bandwidth sharing, DePIN, mining, GPU compute and storage earners. With this server, an AI agent can read your earnings and the health of every box, and start, stop or deploy earners on any worker.
 
 It talks to your own [CashPilot](https://github.com/GeiserX/CashPilot) instance with its API key, over stdio or Streamable HTTP.
 
@@ -119,7 +119,7 @@ With more than one worker online, service tools need `worker_id` (from `list_wor
 
 ## Related projects
 
-[CashPilot](https://github.com/GeiserX/CashPilot), the passive income fleet manager this server talks to.
+[CashPilot](https://github.com/GeiserX/CashPilot), the self-hosted dashboard for every earner and every box that this server talks to.
 
 ## License
 
