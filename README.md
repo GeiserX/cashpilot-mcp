@@ -10,6 +10,8 @@
   <a href="https://hub.docker.com/r/drumsergio/cashpilot-mcp"><img src="https://img.shields.io/docker/pulls/drumsergio/cashpilot-mcp?style=flat-square&logo=docker" alt="Docker Pulls"/></a>
   <a href="https://github.com/GeiserX/cashpilot-mcp/stargazers"><img src="https://img.shields.io/github/stars/GeiserX/cashpilot-mcp?style=flat-square&logo=github" alt="GitHub Stars"/></a>
   <a href="https://github.com/GeiserX/cashpilot-mcp/blob/main/LICENSE"><img src="https://img.shields.io/github/license/GeiserX/cashpilot-mcp?style=flat-square" alt="License"/></a>
+  <a href="https://cashpilot.club"><img src="https://img.shields.io/badge/website-cashpilot.club-blue?style=flat-square" alt="Website"/></a>
+  <a href="https://x.com/CashPilotClub"><img src="https://img.shields.io/badge/X-%40CashPilotClub-000000?style=flat-square&logo=x" alt="X"/></a>
 </p>
 
 <p align="center"><strong>A tiny bridge that exposes any CashPilot instance as an MCP server, enabling LLMs to monitor passive income earnings, manage services, and control fleet workers.</strong></p>
