@@ -34,7 +34,7 @@ Every snippet runs the npm package over stdio. Use the admin key (`CASHPILOT_ADM
 **Claude Code**
 
 ```sh
-claude mcp add --transport stdio --env CASHPILOT_URL=http://localhost:8080 --env CASHPILOT_API_KEY=<key> cashpilot -- npx -y cashpilot-mcp
+claude mcp add --transport stdio cashpilot --env CASHPILOT_URL=http://localhost:8080 --env CASHPILOT_API_KEY=<key> -- npx -y cashpilot-mcp
 ```
 
 **Claude Desktop** (`claude_desktop_config.json`) and **Cursor** (`~/.cursor/mcp.json` or `.cursor/mcp.json`)
