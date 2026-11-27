@@ -15,9 +15,9 @@
 
 | Project | Description |
 |---------|-------------|
-| [CashPilot](https://github.com/GeiserX/CashPilot) | Self-hosted passive income platform with web UI for setup and earnings tracking |
-| [CashPilot-android](https://github.com/GeiserX/CashPilot-android) | Android monitoring agent for CashPilot passive income apps |
-| [cashpilot-ha](https://github.com/GeiserX/cashpilot-ha) | Home Assistant custom integration for CashPilot passive income monitoring |
+| [CashPilot](https://github.com/GeiserX/CashPilot) | Self-hosted dashboard and Docker worker for every earner and every box |
+| [CashPilot-android](https://github.com/GeiserX/CashPilot-android) | Android agent that watches the earning apps on your phone and reports them to your fleet |
+| [cashpilot-ha](https://github.com/GeiserX/cashpilot-ha) | Home Assistant custom integration for CashPilot earnings and service status |
 
 ## Other MCP servers by GeiserX
 
