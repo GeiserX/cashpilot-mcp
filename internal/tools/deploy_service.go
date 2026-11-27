@@ -147,7 +147,10 @@ func needsApproval(slug string, err error) (string, bool) {
 		if copies := describeCopies(apiErr.Containers); copies != "" {
 			b.WriteString(": " + copies)
 		}
-		b.WriteString(". This deploy replaces those containers, and CashPilot does that only after the owner agrees. Nothing was replaced. ")
+		b.WriteString(". This deploy replaces those containers, and CashPilot does that only after the owner agrees. CashPilot has not replaced them. ")
+		if strings.Contains(apiErr.Detail, "last reported") {
+			b.WriteString("This worker is old: the ids are the ones it last reported, so it could replace a different container. Tell the owner this before asking. ")
+		}
 		if confirm, err := json.Marshal(apiErr.Containers); err == nil && len(apiErr.Containers) > 0 {
 			b.WriteString("Ask the owner whether to replace them. If they agree, call deploy_service again with the same arguments and replace_containers set to " +
 				string(confirm) + ". ")
@@ -159,7 +162,7 @@ func needsApproval(slug string, err error) (string, bool) {
 		if id := apiErr.Current; id != "" && id != "none" {
 			b.WriteString(" (now container " + shortID(id) + ")")
 		}
-		b.WriteString(". Nothing was replaced. Call deploy_service again without replace_containers to see what runs now, then ask the owner again. ")
+		b.WriteString(". CashPilot stopped at that container. Copies it reached before it may already run the new settings. Call deploy_service again without replace_containers to see what runs now, then ask the owner again. ")
 	default:
 		return "", false
 	}

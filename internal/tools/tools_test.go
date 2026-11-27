@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -872,7 +873,7 @@ func TestDeployService_runs_the_3_0_replace_confirmation(t *testing.T) {
 	text := first.Content[0].(mcp.TextContent).Text
 	for _, want := range []string{
 		"honeygain already runs on this worker: instance 1 (container fedcba987654), instance 2 (container 0123456789ab), proxied copy 3 (container abcdef012345).",
-		"Nothing was replaced.",
+		"CashPilot has not replaced them.",
 		"Ask the owner",
 		`replace_containers set to {"1":"fedcba9876543210","2":"0123456789abcdef","4":"none","p3":"abcdef0123456789"}`,
 	} {
@@ -906,6 +907,41 @@ func TestDeployService_runs_the_3_0_replace_confirmation(t *testing.T) {
 	}
 }
 
+func TestDeployService_old_worker_warning_survives_many_copies(t *testing.T) {
+	// The message _ask_deploy_confirmation writes for an old worker running six
+	// copies: the warning comes last, past the usual quote cap.
+	targets := map[string]string{}
+	lines := []string{}
+	for n := 1; n <= 6; n++ {
+		id := fmt.Sprintf("%d123456789abcdef", n)
+		targets[fmt.Sprint(n)] = id
+		lines = append(lines, fmt.Sprintf("Instance %d (%s)", n, id[:12]))
+	}
+	msg := "Replace these containers for honeygain on home-server-in-the-garage?\n\n" + strings.Join(lines, "\n") +
+		"\n\nThese are the container IDs this worker last reported. It could replace a different container." +
+		"\n\nUpdate this worker so it can verify the container ID itself."
+	detail, _ := json.Marshal(map[string]any{"detail": map[string]any{
+		"error": "confirm_deploy_targets", "message": msg, "expected_containers": targets,
+	}})
+	srv, _ := recordingAPI(t, [2]string{"409", string(detail)})
+	_, handler := NewDeployService(client.NewClient(srv.URL, ""))
+
+	result, err := handler(context.Background(), makeCallToolRequest("deploy_service",
+		map[string]any{"slug": "honeygain", "instances": 6}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := result.Content[0].(mcp.TextContent).Text
+	for _, want := range []string{
+		"This worker is old: the ids are the ones it last reported, so it could replace a different container. Tell the owner this before asking.",
+		"It could replace a different container. Update this worker so it can verify the container ID itself.",
+	} {
+		if !result.IsError || !strings.Contains(text, want) {
+			t.Errorf("IsError = %v, text lacks %q:\n%s", result.IsError, want, text)
+		}
+	}
+}
+
 func TestDeployService_target_changed_asks_for_a_fresh_look(t *testing.T) {
 	changed := `{"detail":{"error":"deploy_target_changed",` +
 		`"message":"The container changed or needs approval. Review it and use Redeploy.","current_container":"0123456789abcdef"}}`
@@ -921,7 +957,7 @@ func TestDeployService_target_changed_asks_for_a_fresh_look(t *testing.T) {
 	text := result.Content[0].(mcp.TextContent).Text
 	for _, want := range []string{
 		"now container 0123456789ab",
-		"Nothing was replaced.",
+		"CashPilot stopped at that container. Copies it reached before it may already run the new settings.",
 		"Call deploy_service again without replace_containers",
 	} {
 		if !result.IsError || !strings.Contains(text, want) {

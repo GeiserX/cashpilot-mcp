@@ -29,11 +29,11 @@ Read tools change nothing. `CASHPILOT_READ_ONLY=true` registers only the five th
 
 A redeploy, or a new number of instances for a running service, replaces its containers. CashPilot 3.0 and later do that only after the owner agrees:
 
-1. The agent calls `deploy_service`. CashPilot replaces nothing and lists the containers it would replace. The answer ends with the `replace_containers` value to send back, for example `{"1":"0123456789abcdef..."}`.
+1. The agent calls `deploy_service`. CashPilot replaces nothing and lists the containers it would replace. The answer gives the `replace_containers` value to send back, for example `{"1":"0123456789abcdef..."}`.
 2. The agent shows that list to the owner and asks.
 3. If the owner agrees, the agent calls `deploy_service` again with the same arguments plus that `replace_containers`. CashPilot replaces exactly those containers.
 
-If a container changed between the two calls, CashPilot refuses and replaces nothing. The agent then starts again at step 1. A service that does not run yet deploys on the first call. CashPilot before 3.0 redeploys on the first call.
+If a container changed between the two calls, CashPilot stops at that container. Copies it reached before it may already run the new settings. The agent then starts again at step 1. A service that does not run yet deploys on the first call. CashPilot before 3.0 redeploys on the first call.
 
 ## Resources
 

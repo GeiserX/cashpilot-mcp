@@ -25,6 +25,9 @@ const (
 	maxErrorBytes = 8 << 10
 	// maxDetailRunes caps the upstream detail quoted back to the model.
 	maxDetailRunes = 300
+	// maxConfirmRunes caps a confirm_deploy_targets message, which lists every
+	// copy and may end with a warning about an old worker: kept whole.
+	maxConfirmRunes = maxDetailRunes + maxReportedCopies*40
 	// maxReportedCopies caps the containers kept from one refusal.
 	maxReportedCopies = 32
 	// invalidRequestText stands in for a detail that cannot be shown.
@@ -240,7 +243,11 @@ func detailOf(body []byte, e *APIError) {
 		}
 	}
 	e.Code = code
-	e.Detail = cleanDetail(msg)
+	limit := maxDetailRunes
+	if code == CodeConfirmDeployTargets {
+		limit = maxConfirmRunes
+	}
+	e.Detail = capDetail(msg, limit)
 	if e.Detail == "" {
 		e.Detail = code
 	}
@@ -294,7 +301,10 @@ func containersOf(raw json.RawMessage) map[string]string {
 }
 
 // cleanDetail puts an upstream text on one line and caps its length.
-func cleanDetail(s string) string {
+func cleanDetail(s string) string { return capDetail(s, maxDetailRunes) }
+
+// capDetail puts an upstream text on one line and caps it at limit runes.
+func capDetail(s string, limit int) string {
 	s = strings.Map(func(r rune) rune {
 		if unicode.IsControl(r) {
 			return ' '
@@ -302,8 +312,8 @@ func cleanDetail(s string) string {
 		return r
 	}, s)
 	s = strings.Join(strings.Fields(s), " ")
-	if r := []rune(s); len(r) > maxDetailRunes {
-		s = string(r[:maxDetailRunes]) + "…"
+	if r := []rune(s); len(r) > limit {
+		s = string(r[:limit]) + "…"
 	}
 	return s
 }
