@@ -23,18 +23,18 @@ Speaks MCP 2026-07-28 and every earlier revision down to 2024-11-05 from the sam
 - Earnings: totals, per-service balances with cashout eligibility, daily series and history.
 - Fleet: deployed services, the deployable catalog, workers, health scores and collector alerts, as tools and as `cashpilot://` resources.
 - Service control on any worker: start, stop, restart, deploy, remove, logs, plus `trigger_collection` and a Docker Compose export per architecture.
-- Read-only mode: `CASHPILOT_READ_ONLY=true` registers only the tools that change nothing.
+- Read-only mode: `CASHPILOT_READ_ONLY=true` registers only the five tools the read-only key allows, and none of them changes anything.
 - Every tool has a title and read-only/destructive hints, list tools return structured JSON, inputs are validated.
 - HTTP mode listens on `127.0.0.1:8081`, checks `Origin`, caps request size and requires `MCP_AUTH_TOKEN` on any non-loopback address.
 
 ## Install
 
-Every snippet runs the npm package over stdio. Use the admin key (`CASHPILOT_ADMIN_API_KEY`) for full control, or the read-only key (`CASHPILOT_READONLY_API_KEY`) with `CASHPILOT_READ_ONLY=true`. Never the fleet key.
+Every snippet runs the npm package over stdio. Use the admin key (`CASHPILOT_ADMIN_API_KEY`) for full control. Or use the read-only key (`CASHPILOT_READONLY_API_KEY`) with `CASHPILOT_READ_ONLY=true`: CashPilot lets that key read only the earnings summary and breakdown, the deployed services, the fleet summary and the health scores. Never the fleet key.
 
 **Claude Code**
 
 ```sh
-claude mcp add --transport stdio --env CASHPILOT_URL=http://localhost:8080 --env CASHPILOT_API_KEY=<key> cashpilot -- npx -y cashpilot-mcp
+claude mcp add --transport stdio cashpilot --env CASHPILOT_URL=http://localhost:8080 --env CASHPILOT_API_KEY=<key> -- npx -y cashpilot-mcp
 ```
 
 **Claude Desktop** (`claude_desktop_config.json`) and **Cursor** (`~/.cursor/mcp.json` or `.cursor/mcp.json`)
@@ -102,7 +102,7 @@ Docker, the HTTP server and local builds are in [Getting started](https://github
 | `trigger_collection` | Collect earnings now, in the background | yes |
 | `start_service` / `restart_service` | Start or restart a container | yes |
 | `stop_service` | Stop a container; it stops earning | yes, destructive |
-| `deploy_service` | Deploy with env, hostname, instances; on CashPilot 3.0+ a redeploy needs the owner's confirmation in the dashboard | yes, destructive |
+| `deploy_service` | Deploy with env, hostname, instances; on CashPilot 3.0+ a redeploy runs only after the owner agrees (`replace_containers`) | yes, destructive |
 | `remove_service` | Remove a deployment; volumes are kept | yes, destructive |
 
 With more than one worker online, service tools need `worker_id` (from `list_workers`). Resources and details are in [Usage](https://github.com/GeiserX/cashpilot-mcp/blob/main/docs/usage.md).

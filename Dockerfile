@@ -23,6 +23,6 @@ EXPOSE 8081
 # HTTP mode listens on every interface, and then refuses to start without
 # MCP_AUTH_TOKEN. TRANSPORT=stdio (the registry's OCI entry) opens no port.
 ENV LISTEN_ADDR=0.0.0.0:8081
-ENV CASHPILOT_URL=http://cashpilot:8080
+ENV CASHPILOT_URL=http://cashpilot-ui:8080
 USER 65532:65532
 ENTRYPOINT ["/usr/local/bin/cashpilot-mcp"]

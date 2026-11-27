@@ -25,6 +25,9 @@ const (
 	maxErrorBytes = 8 << 10
 	// maxDetailRunes caps the upstream detail quoted back to the model.
 	maxDetailRunes = 300
+	// maxConfirmRunes caps a confirm_deploy_targets message, which lists every
+	// copy and may end with a warning about an old worker: kept whole.
+	maxConfirmRunes = maxDetailRunes + maxReportedCopies*40
 	// maxReportedCopies caps the containers kept from one refusal.
 	maxReportedCopies = 32
 	// invalidRequestText stands in for a detail that cannot be shown.
@@ -105,14 +108,32 @@ func (e *APIError) Error() string {
 	switch {
 	case e.Status == http.StatusUnauthorized:
 		msg += ". CASHPILOT_API_KEY is missing or wrong."
+	case e.Status == http.StatusForbidden && e.Detail == "Read-only token":
+		// app/deps.py _require_auth_api; the allowlist is _require_reader's callers.
+		msg += ". The read-only key allows only get_earnings_summary, get_earnings_breakdown, get_fleet_summary, get_health_scores and list_deployed_services. " +
+			"Use the admin key for this call, or set CASHPILOT_READ_ONLY=true to list only the tools this key allows."
+	case e.Status == http.StatusForbidden && strings.Contains(e.Detail, "fleet key"):
+		msg += ". Use the admin key or the read-only key, never the fleet key."
 	case e.Status == http.StatusForbidden:
-		msg += ". The API key's role does not allow this call: a read-only key cannot change services or read logs."
+		msg += ". This API key's role does not allow this call."
 	case e.Status == http.StatusBadRequest && strings.Contains(e.Detail, "worker_id"):
 		msg += ". Pass worker_id; list_workers shows the ids."
+	case e.Status == http.StatusNotFound && isWorkerNotFound(e.Detail):
+		msg += ". Check worker_id with list_workers."
 	case e.Status == http.StatusNotFound:
 		msg += ". Check the slug with list_deployed_services or list_available_services."
 	}
 	return msg
+}
+
+// isWorkerNotFound matches CashPilot's worker 404s by their start: "Worker not
+// found", "Unknown worker 7" and "No such worker, ..." (app/main.py). A service
+// 404 such as "Service 'worker' not found" must fall through to the slug hint.
+func isWorkerNotFound(detail string) bool {
+	d := strings.ToLower(detail)
+	return strings.HasPrefix(d, "worker not found") ||
+		strings.HasPrefix(d, "unknown worker") ||
+		strings.HasPrefix(d, "no such worker")
 }
 
 type Client struct {
@@ -231,13 +252,37 @@ func detailOf(body []byte, e *APIError) {
 		}
 	}
 	e.Code = code
-	e.Detail = cleanDetail(msg)
+	limit := maxDetailRunes
+	if code == CodeConfirmDeployTargets {
+		limit = maxConfirmRunes
+	}
+	e.Detail = capDetail(msg, limit)
 	if e.Detail == "" {
 		e.Detail = code
 	}
 	if e.Detail == "" {
 		e.Detail = invalidRequestText
 	}
+}
+
+// ErrInvalidContainers is returned before any request is sent for a
+// replacement map that is not one CashPilot sent.
+var ErrInvalidContainers = fmt.Errorf("replace_containers must be the map from CashPilot's refusal, copied unchanged: "+
+	"copy number (\"1\", or \"p3\" for a proxied copy) to container id or \"none\", at most %d entries", maxReportedCopies)
+
+// ValidateContainers reports whether m has the shape of the
+// expected_containers map CashPilot sends with confirm_deploy_targets, so it
+// can be sent back as the owner's confirmation.
+func ValidateContainers(m map[string]string) error {
+	if len(m) == 0 || len(m) > maxReportedCopies {
+		return ErrInvalidContainers
+	}
+	for k, id := range m {
+		if !copyKeyPattern.MatchString(k) || !containerIDPattern.MatchString(id) {
+			return ErrInvalidContainers
+		}
+	}
+	return nil
 }
 
 // containersOf keeps the copy-to-container pairs of expected_containers that
@@ -265,7 +310,10 @@ func containersOf(raw json.RawMessage) map[string]string {
 }
 
 // cleanDetail puts an upstream text on one line and caps its length.
-func cleanDetail(s string) string {
+func cleanDetail(s string) string { return capDetail(s, maxDetailRunes) }
+
+// capDetail puts an upstream text on one line and caps it at limit runes.
+func capDetail(s string, limit int) string {
 	s = strings.Map(func(r rune) rune {
 		if unicode.IsControl(r) {
 			return ' '
@@ -273,8 +321,8 @@ func cleanDetail(s string) string {
 		return r
 	}, s)
 	s = strings.Join(strings.Fields(s), " ")
-	if r := []rune(s); len(r) > maxDetailRunes {
-		s = string(r[:maxDetailRunes]) + "…"
+	if r := []rune(s); len(r) > limit {
+		s = string(r[:limit]) + "…"
 	}
 	return s
 }

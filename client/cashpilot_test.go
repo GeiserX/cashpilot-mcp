@@ -161,8 +161,48 @@ func TestDo_quotes_fastapi_detail_in_error_message(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	if !strings.Contains(err.Error(), "forbidden-detail") || !strings.Contains(err.Error(), "read-only key") {
+	if !strings.Contains(err.Error(), "forbidden-detail") || !strings.Contains(err.Error(), "This API key's role does not allow this call.") {
 		t.Errorf("error = %q, want the detail and the role hint", err.Error())
+	}
+}
+
+// The hint after a 403 or 404 names what is wrong, from CashPilot's detail
+// (app/deps.py for the 403s, app/main.py "Worker not found" for the 404).
+func TestDo_hint_matches_the_refusal(t *testing.T) {
+	cases := []struct {
+		name, body    string
+		status        int
+		want, notWant string
+	}{
+		{"read-only key", `{"detail":"Read-only token"}`, 403,
+			"The read-only key allows only get_earnings_summary, get_earnings_breakdown, get_fleet_summary, get_health_scores and list_deployed_services",
+			"cannot change services or read logs"},
+		{"fleet key", `{"detail":"The fleet key only enrolls workers"}`, 403,
+			"Use the admin key or the read-only key, never the fleet key.", "read-only key allows only"},
+		{"owner only", `{"detail":"Owner access required"}`, 403,
+			"This API key's role does not allow this call.", "read-only key"},
+		{"unknown worker", `{"detail":"Worker not found"}`, 404,
+			"Check worker_id with list_workers.", "Check the slug"},
+		{"unknown worker by id", `{"detail":"Unknown worker 99"}`, 404,
+			"Check worker_id with list_workers.", "Check the slug"},
+		{"unknown service", `{"detail":"Service 'nope' not found"}`, 404,
+			"Check the slug with list_deployed_services or list_available_services.", "list_workers"},
+		{"service named worker", `{"detail":"Service 'worker' not found"}`, 404,
+			"Check the slug with list_deployed_services or list_available_services.", "list_workers"},
+		{"worker that cannot run containers", `{"detail":"No such worker, or it cannot run containers."}`, 404,
+			"Check worker_id with list_workers.", "Check the slug"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			srv, _ := newCapturingServer(t, tc.status, tc.body)
+			_, err := NewClient(srv.URL, "").StopService(context.Background(), "honeygain", Target{WorkerID: 99})
+			if err == nil {
+				t.Fatal("expected an error")
+			}
+			if !strings.Contains(err.Error(), tc.want) || strings.Contains(err.Error(), tc.notWant) {
+				t.Errorf("error = %q, want %q and not %q", err.Error(), tc.want, tc.notWant)
+			}
+		})
 	}
 }
 

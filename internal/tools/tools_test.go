@@ -3,8 +3,10 @@ package tools
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -824,54 +826,165 @@ func TestDeployService_returns_tool_error_on_api_failure(t *testing.T) {
 	}
 }
 
-func TestDeployService_explains_the_confirmation_cashpilot_3_asks_for(t *testing.T) {
-	// The web dashboard's 409 for a redeploy (app/main.py _ask_deploy_confirmation).
-	confirm := `{"detail":{"error":"confirm_deploy_targets",` +
-		`"message":"Replace these containers for honeygain on box-1?\n\nInstance 1 (0123456789ab)",` +
-		`"expected_containers":{"p3":"abcdef0123456789","2":"0123456789abcdef","1":"fedcba9876543210","4":"none"}}}`
-	// The worker's refusal, as the dashboard forwards it (_safe_worker_detail).
+// The web dashboard's 409 for a redeploy (CashPilot app/main.py _ask_deploy_confirmation).
+const confirmDeployBody = `{"detail":{"error":"confirm_deploy_targets",` +
+	`"message":"Replace these containers for honeygain on box-1?\n\nInstance 1 (0123456789ab)",` +
+	`"expected_containers":{"p3":"abcdef0123456789","2":"0123456789abcdef","1":"fedcba9876543210","4":"none"}}}`
+
+// recordingAPI answers POST /api/deploy/honeygain with each status and body in
+// turn and keeps every request body.
+func recordingAPI(t *testing.T, answers ...[2]string) (*httptest.Server, *[]map[string]any) {
+	t.Helper()
+	var bodies []map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var b map[string]any
+		_ = json.NewDecoder(r.Body).Decode(&b)
+		bodies = append(bodies, b)
+		if r.Method+" "+r.URL.Path != "POST /api/deploy/honeygain" || len(bodies) > len(answers) {
+			w.WriteHeader(500)
+			return
+		}
+		a := answers[len(bodies)-1]
+		if a[0] == "409" {
+			w.WriteHeader(409)
+		}
+		_, _ = w.Write([]byte(a[1]))
+	}))
+	t.Cleanup(srv.Close)
+	return srv, &bodies
+}
+
+func TestDeployService_runs_the_3_0_replace_confirmation(t *testing.T) {
+	srv, bodies := recordingAPI(t,
+		[2]string{"409", confirmDeployBody},
+		[2]string{"200", `{"status":"deployed"}`},
+	)
+	_, handler := NewDeployService(client.NewClient(srv.URL, ""))
+
+	// First call: CashPilot lists what runs and replaces nothing.
+	first, err := handler(context.Background(), makeCallToolRequest("deploy_service",
+		map[string]any{"slug": "honeygain", "instances": 4}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !first.IsError {
+		t.Fatal("a refused deploy must be a tool error")
+	}
+	text := first.Content[0].(mcp.TextContent).Text
+	for _, want := range []string{
+		"honeygain already runs on this worker: instance 1 (container fedcba987654), instance 2 (container 0123456789ab), proxied copy 3 (container abcdef012345).",
+		"CashPilot has not replaced them.",
+		"Ask the owner",
+		`replace_containers set to {"1":"fedcba9876543210","2":"0123456789abcdef","4":"none","p3":"abcdef0123456789"}`,
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("text lacks %q:\n%s", want, text)
+		}
+	}
+	if strings.Contains(text, "cannot") || strings.Contains(text, "container none") {
+		t.Errorf("text = %s", text)
+	}
+	b := (*bodies)[0]
+	if b["replace_existing"] != true || b["expected_containers"] != nil {
+		t.Errorf("first call must ask CashPilot for the targets: %v", b)
+	}
+
+	// Second call, after the owner agreed: the map goes back unchanged.
+	second, err := handler(context.Background(), makeCallToolRequest("deploy_service", map[string]any{
+		"slug": "honeygain", "instances": 4,
+		"replace_containers": map[string]any{"1": "fedcba9876543210", "2": "0123456789abcdef", "4": "none", "p3": "abcdef0123456789"},
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if second.IsError {
+		t.Fatalf("confirmed deploy failed: %v", second.Content)
+	}
+	b = (*bodies)[1]
+	want := map[string]any{"1": "fedcba9876543210", "2": "0123456789abcdef", "4": "none", "p3": "abcdef0123456789"}
+	if got, _ := b["expected_containers"].(map[string]any); !reflect.DeepEqual(got, want) || b["replace_existing"] != true || b["instances"] != float64(4) {
+		t.Errorf("confirmed body = %v", b)
+	}
+}
+
+func TestDeployService_old_worker_warning_survives_many_copies(t *testing.T) {
+	// The message _ask_deploy_confirmation writes for an old worker running six
+	// copies: the warning comes last, past the usual quote cap.
+	targets := map[string]string{}
+	lines := []string{}
+	for n := 1; n <= 6; n++ {
+		id := fmt.Sprintf("%d123456789abcdef", n)
+		targets[fmt.Sprint(n)] = id
+		lines = append(lines, fmt.Sprintf("Instance %d (%s)", n, id[:12]))
+	}
+	msg := "Replace these containers for honeygain on home-server-in-the-garage?\n\n" + strings.Join(lines, "\n") +
+		"\n\nThese are the container IDs this worker last reported. It could replace a different container." +
+		"\n\nUpdate this worker so it can verify the container ID itself."
+	detail, _ := json.Marshal(map[string]any{"detail": map[string]any{
+		"error": "confirm_deploy_targets", "message": msg, "expected_containers": targets,
+	}})
+	srv, _ := recordingAPI(t, [2]string{"409", string(detail)})
+	_, handler := NewDeployService(client.NewClient(srv.URL, ""))
+
+	result, err := handler(context.Background(), makeCallToolRequest("deploy_service",
+		map[string]any{"slug": "honeygain", "instances": 6}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := result.Content[0].(mcp.TextContent).Text
+	for _, want := range []string{
+		"This worker is old: the ids are the ones it last reported, so it could replace a different container. Tell the owner this before asking.",
+		"It could replace a different container. Update this worker so it can verify the container ID itself.",
+	} {
+		if !result.IsError || !strings.Contains(text, want) {
+			t.Errorf("IsError = %v, text lacks %q:\n%s", result.IsError, want, text)
+		}
+	}
+}
+
+func TestDeployService_target_changed_asks_for_a_fresh_look(t *testing.T) {
 	changed := `{"detail":{"error":"deploy_target_changed",` +
 		`"message":"The container changed or needs approval. Review it and use Redeploy.","current_container":"0123456789abcdef"}}`
-	cases := []struct {
-		name, body string
-		copies     string
-	}{
-		{"confirm_deploy_targets", confirm,
-			": instance 1 (container fedcba987654), instance 2 (container 0123456789ab), proxied copy 3 (container abcdef012345)."},
-		{"deploy_target_changed", changed, "so this deploy would replace it: container 0123456789ab. "},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			srv := mockAPI(t, map[string]struct {
-				status int
-				body   string
-			}{
-				"POST /api/deploy/honeygain": {409, tc.body},
-			})
-			_, handler := NewDeployService(client.NewClient(srv.URL, ""))
+	srv, _ := recordingAPI(t, [2]string{"409", changed})
+	_, handler := NewDeployService(client.NewClient(srv.URL, ""))
 
-			result, err := handler(context.Background(), makeCallToolRequest("deploy_service", map[string]any{"slug": "honeygain"}))
+	result, err := handler(context.Background(), makeCallToolRequest("deploy_service", map[string]any{
+		"slug": "honeygain", "replace_containers": map[string]any{"1": "fedcba9876543210"},
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := result.Content[0].(mcp.TextContent).Text
+	for _, want := range []string{
+		"now container 0123456789ab",
+		"CashPilot stopped at that container. Copies it reached before it may already run the new settings.",
+		"Call deploy_service again without replace_containers",
+	} {
+		if !result.IsError || !strings.Contains(text, want) {
+			t.Errorf("IsError = %v, text lacks %q:\n%s", result.IsError, want, text)
+		}
+	}
+}
+
+func TestDeployService_refuses_a_bad_replace_containers(t *testing.T) {
+	for name, rc := range map[string]any{
+		"not an object":  "1=abc",
+		"empty":          map[string]any{},
+		"non-string id":  map[string]any{"1": 7},
+		"short id":       map[string]any{"1": "abc"},
+		"bad copy key":   map[string]any{"x1": "fedcba9876543210"},
+		"upper-case hex": map[string]any{"1": "FEDCBA9876543210"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			srv, bodies := recordingAPI(t)
+			_, handler := NewDeployService(client.NewClient(srv.URL, ""))
+			result, err := handler(context.Background(), makeCallToolRequest("deploy_service",
+				map[string]any{"slug": "honeygain", "replace_containers": rc}))
 			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
+				t.Fatal(err)
 			}
-			if !result.IsError {
-				t.Fatal("a refused deploy must be a tool error")
-			}
-			text := result.Content[0].(mcp.TextContent).Text
-			for _, want := range []string{
-				"honeygain already has a container on this worker",
-				tc.copies,
-				"CashPilot asks the owner to confirm",
-				"This tool cannot give that confirmation",
-				"open the CashPilot dashboard and redeploy honeygain",
-				"The settings sent in this call may not be saved",
-			} {
-				if !strings.Contains(text, want) {
-					t.Errorf("text lacks %q:\n%s", want, text)
-				}
-			}
-			if strings.Contains(text, "rejected as invalid") || strings.Contains(text, "container none") {
-				t.Errorf("text = %s", text)
+			if !result.IsError || len(*bodies) != 0 {
+				t.Errorf("IsError = %v, requests = %d; want a tool error and no request", result.IsError, len(*bodies))
 			}
 		})
 	}
@@ -916,13 +1029,18 @@ func TestDeployService_passes_other_conflicts_through(t *testing.T) {
 
 func TestDeployService_description_states_the_3_0_confirmation(t *testing.T) {
 	tool, _ := NewDeployService(client.NewClient("http://localhost", ""))
-	if strings.Contains(tool.Description, "redeploys it with the new settings;") {
-		t.Errorf("description still promises a one-call redeploy: %s", tool.Description)
+	for _, bad := range []string{"redeploys it with the new settings;", "cannot confirm"} {
+		if strings.Contains(tool.Description, bad) {
+			t.Errorf("description says %q: %s", bad, tool.Description)
+		}
 	}
-	for _, want := range []string{"CashPilot 3.0", "confirms it in the CashPilot dashboard", "This tool cannot confirm"} {
+	for _, want := range []string{"CashPilot 3.0", "only after the owner agrees", "replace_containers"} {
 		if !strings.Contains(tool.Description, want) {
 			t.Errorf("description lacks %q: %s", want, tool.Description)
 		}
+	}
+	if _, ok := tool.InputSchema.Properties["replace_containers"]; !ok {
+		t.Error("deploy_service has no replace_containers parameter")
 	}
 }
 

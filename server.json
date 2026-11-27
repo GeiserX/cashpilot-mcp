@@ -44,7 +44,7 @@
         },
         {
           "name": "CASHPILOT_READ_ONLY",
-          "description": "Set to true (or 1) to register only the tools that change nothing (no start, stop, restart, deploy, remove or collection)",
+          "description": "Set to true (or 1) to register only the five read tools the read-only key allows; nothing that changes the fleet",
           "isRequired": false,
           "format": "boolean",
           "isSecret": false,
@@ -58,6 +58,16 @@
       "transport": {
         "type": "stdio"
       },
+      "runtimeArguments": [
+        {
+          "type": "named",
+          "name": "--network",
+          "description": "CashPilot's compose network, so the container reaches cashpilot-ui. docker network ls shows its name.",
+          "valueHint": "cashpilot_cashpilot_owned",
+          "isRequired": true,
+          "format": "string"
+        }
+      ],
       "environmentVariables": [
         {
           "name": "TRANSPORT",
@@ -69,7 +79,7 @@
         },
         {
           "name": "CASHPILOT_URL",
-          "description": "CashPilot instance URL (e.g. http://localhost:8080)",
+          "description": "CashPilot URL as the container sees it, e.g. http://cashpilot-ui:8080. The container must join CashPilot's compose network (see docs/getting-started.md)",
           "isRequired": true,
           "format": "string",
           "isSecret": false
@@ -83,7 +93,7 @@
         },
         {
           "name": "CASHPILOT_READ_ONLY",
-          "description": "Set to true (or 1) to register only the tools that change nothing (no start, stop, restart, deploy, remove or collection)",
+          "description": "Set to true (or 1) to register only the five read tools the read-only key allows; nothing that changes the fleet",
           "isRequired": false,
           "format": "boolean",
           "isSecret": false,

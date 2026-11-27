@@ -20,7 +20,7 @@ func main() {
 	cp := client.NewClient(cfg.BaseURL, cfg.APIKey)
 	s := app.NewServer(cp, app.Options{ReadOnly: cfg.ReadOnly})
 	if cfg.ReadOnly {
-		log.Println("read-only mode: tools that change the fleet are not registered")
+		log.Println("read-only mode: only the tools and resources the read-only key may read are registered")
 	}
 
 	if strings.ToLower(os.Getenv("TRANSPORT")) == "stdio" {

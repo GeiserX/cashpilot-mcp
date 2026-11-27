@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -105,20 +106,76 @@ func TestTools_every_tool_has_a_title_and_all_four_hints(t *testing.T) {
 	}
 }
 
-func TestTools_read_only_mode_hides_every_mutating_tool(t *testing.T) {
+// readerTools and readerResources are what CashPilot's read-only key may
+// read: the routes that call _require_reader (CashPilot app/main.py). Every
+// other route answers that key 403 "Read-only token" (app/deps.py).
+var (
+	readerTools = []string{
+		"get_earnings_breakdown", "get_earnings_summary", "get_fleet_summary",
+		"get_health_scores", "list_deployed_services",
+	}
+	readerResources = []string{
+		"cashpilot://earnings/breakdown", "cashpilot://earnings/summary", "cashpilot://fleet/summary",
+		"cashpilot://health/scores", "cashpilot://services/deployed",
+	}
+)
+
+func TestTools_read_only_mode_lists_only_what_the_read_only_key_can_read(t *testing.T) {
 	listed := listTools(t, Options{ReadOnly: true})
-	readOnly := 0
-	for _, w := range expectedTools {
-		if w.readOnly {
-			readOnly++
+	names := make([]string, 0, len(listed))
+	for _, tool := range listed {
+		names = append(names, tool.Name)
+		if !expectedTools[tool.Name].readOnly {
+			t.Errorf("read-only mode lists the mutating tool %s", tool.Name)
 		}
 	}
-	if len(listed) != readOnly {
-		t.Errorf("read-only mode lists %d tools, want the %d read-only ones", len(listed), readOnly)
+	if strings.Join(names, ",") != strings.Join(readerTools, ",") {
+		t.Errorf("read-only mode lists %v, want %v", names, readerTools)
 	}
-	for _, tool := range listed {
-		if !expectedTools[tool.Name].readOnly {
-			t.Errorf("read-only mode still lists %s", tool.Name)
+}
+
+func listResources(t *testing.T, opts Options) []string {
+	t.Helper()
+	p := newStdioPeer(t, NewServer(client.NewClient("http://127.0.0.1:1", ""), opts))
+	r := p.call(1, "resources/list", modernMeta())
+	if r.Error != nil {
+		t.Fatalf("resources/list: %s", r.Error.Message)
+	}
+	var res struct {
+		Resources []struct {
+			URI string `json:"uri"`
+		} `json:"resources"`
+	}
+	if err := json.Unmarshal(r.Result, &res); err != nil {
+		t.Fatal(err)
+	}
+	uris := make([]string, 0, len(res.Resources))
+	for _, r := range res.Resources {
+		uris = append(uris, r.URI)
+	}
+	sort.Strings(uris)
+	return uris
+}
+
+func TestResources_read_only_mode_lists_only_what_the_read_only_key_can_read(t *testing.T) {
+	if got := listResources(t, Options{ReadOnly: true}); strings.Join(got, ",") != strings.Join(readerResources, ",") {
+		t.Errorf("read-only mode lists %v, want %v", got, readerResources)
+	}
+	if got := listResources(t, Options{}); len(got) != 8 {
+		t.Errorf("full mode lists %d resources, want 8: %v", len(got), got)
+	}
+}
+
+func TestInstructions_name_only_registered_tools(t *testing.T) {
+	for _, opts := range []Options{{}, {ReadOnly: true}} {
+		listed := map[string]bool{}
+		for _, tool := range listTools(t, opts) {
+			listed[tool.Name] = true
+		}
+		for _, w := range regexp.MustCompile(`\b(?:get|list|start|stop|restart|deploy|remove|trigger)_[a-z_]+`).FindAllString(instructionsFor(opts), -1) {
+			if !listed[w] {
+				t.Errorf("ReadOnly=%v: instructions name %s, which is not registered", opts.ReadOnly, w)
+			}
 		}
 	}
 }
@@ -272,6 +329,27 @@ func TestTools_deploy_sends_env_object_hostname_and_instances(t *testing.T) {
 	}
 	if req.URL.Query().Get("worker_id") != "5" {
 		t.Errorf("deploy query = %v, want worker_id=5", req.URL.Query())
+	}
+}
+
+func TestTools_deploy_sends_the_owners_confirmation(t *testing.T) {
+	f, cp := newFakeCashPilot(t, map[string]string{"POST /api/deploy/earnapp": `{"status":"deployed"}`})
+	res := callTool(t, cp, Options{}, "deploy_service", map[string]any{
+		"slug": "earnapp", "replace_containers": map[string]any{"1": "0123456789abcdef", "2": "none"},
+	})
+	if res.IsError {
+		t.Fatalf("unexpected error: %+v", res)
+	}
+	_, body := f.last(t)
+	if body != `{"expected_containers":{"1":"0123456789abcdef","2":"none"},"replace_existing":true}` {
+		t.Errorf("deploy body = %s", body)
+	}
+
+	res = callTool(t, cp, Options{}, "deploy_service", map[string]any{
+		"slug": "earnapp", "replace_containers": map[string]any{"1": "not-an-id"},
+	})
+	if !res.IsError || f.count() != 1 {
+		t.Errorf("a bad container id reached CashPilot or passed: %+v", res)
 	}
 }
 

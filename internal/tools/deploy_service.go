@@ -20,10 +20,11 @@ func NewDeployService(c *client.Client) (mcp.Tool, server.ToolHandlerFunc) {
 	tool := mcp.NewTool("deploy_service",
 		append([]mcp.ToolOption{
 			mcp.WithDescription("Deploy a catalog service on one worker: CashPilot pulls the image and starts its container(s). " +
-				"CashPilot 3.0 and later refuse to replace a container that already exists there (a redeploy, or a new number of instances for a running service) until the owner confirms it in the CashPilot dashboard. " +
-				"This tool cannot confirm: it reports which containers run and sends the owner to the dashboard. " +
-				"Older CashPilot redeploys with the new settings at once. Keys left out of env keep their saved values. " +
-				"The env keys a service needs (account email, token, ...) are listed in list_available_services. Can take a few minutes."),
+				"Keys left out of env keep their saved values. The env keys a service needs (account email, token, ...) are listed in list_available_services. Can take a few minutes. " +
+				"A redeploy, or a new number of instances for a running service, replaces running containers. CashPilot 3.0 and later do that only after the owner agrees: " +
+				"the first call replaces nothing and lists the containers it would replace. Show that list to the owner. " +
+				"If the owner agrees, call again with the same arguments plus replace_containers, copied from that answer. " +
+				"Older CashPilot redeploys at once."),
 			slugParam("Service to deploy."),
 			mcp.WithObject("env",
 				mcp.AdditionalProperties(map[string]any{"type": "string"}),
@@ -38,6 +39,10 @@ func NewDeployService(c *client.Client) (mcp.Tool, server.ToolHandlerFunc) {
 				mcp.Description("Copies to run on this worker, 1 to 10. Many providers allow one per IP; CashPilot refuses more where that is the case. Default: keep the current number, 1 for a new deployment."),
 			),
 			workerParam(),
+			mcp.WithObject("replace_containers",
+				mcp.AdditionalProperties(map[string]any{"type": "string", "pattern": `^(none|[0-9a-f]{12,64})$`}),
+				mcp.Description(`Send only after the owner agreed to replace the running containers. Copy it unchanged from the answer of the previous deploy_service call: copy number to container id, e.g. {"1":"<container id>"}. A 3.0 worker replaces exactly these containers, and refuses if any of them changed. An older worker cannot check them and could replace a different container.`),
+			),
 		}, hints("Deploy service", false, true, false, true)...)...,
 	)
 
@@ -77,6 +82,17 @@ func NewDeployService(c *client.Client) (mcp.Tool, server.ToolHandlerFunc) {
 			}
 			body["instances"] = n
 		}
+		// replace_existing asks CashPilot 3.0 for the containers a redeploy
+		// replaces; with nothing running it deploys at once. The owner's yes is
+		// that list sent back as expected_containers (as the dashboard does).
+		body["replace_existing"] = true
+		if raw, ok := args["replace_containers"]; ok && raw != nil {
+			confirmed, err := containersArg(raw)
+			if err != nil {
+				return mcp.NewToolResultError(err.Error()), nil
+			}
+			body["expected_containers"] = confirmed
+		}
 		payload, err := json.Marshal(body)
 		if err != nil {
 			return mcp.NewToolResultError("could not encode the deploy request"), nil
@@ -95,28 +111,61 @@ func NewDeployService(c *client.Client) (mcp.Tool, server.ToolHandlerFunc) {
 	return tool, handler
 }
 
+// containersArg reads replace_containers: an object of container ids in the
+// shape CashPilot sent it.
+func containersArg(raw any) (map[string]string, error) {
+	in, ok := raw.(map[string]any)
+	if !ok {
+		return nil, client.ErrInvalidContainers
+	}
+	out := make(map[string]string, len(in))
+	for k, v := range in {
+		id, ok := v.(string)
+		if !ok {
+			return nil, client.ErrInvalidContainers
+		}
+		out[k] = id
+	}
+	if err := client.ValidateContainers(out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // needsApproval turns CashPilot 3.0's refusal to replace an existing
-// container into what the agent can act on: what runs, that CashPilot wants
-// the owner's confirmation, and where the owner gives it.
+// container into what the agent can act on: what runs, that the owner must
+// agree, and the replace_containers value that carries the owner's yes.
 func needsApproval(slug string, err error) (string, bool) {
 	var apiErr *client.APIError
 	if !errors.As(err, &apiErr) || apiErr.Status != http.StatusConflict {
 		return "", false
 	}
-	if apiErr.Code != client.CodeConfirmDeployTargets && apiErr.Code != client.CodeDeployTargetChanged {
+	var b strings.Builder
+	switch apiErr.Code {
+	case client.CodeConfirmDeployTargets:
+		fmt.Fprintf(&b, "%s already runs on this worker", slug)
+		if copies := describeCopies(apiErr.Containers); copies != "" {
+			b.WriteString(": " + copies)
+		}
+		b.WriteString(". This deploy replaces those containers, and CashPilot does that only after the owner agrees. CashPilot has not replaced them. ")
+		if strings.Contains(apiErr.Detail, "last reported") {
+			b.WriteString("This worker is old: the ids are the ones it last reported, so it could replace a different container. Tell the owner this before asking. ")
+		}
+		if confirm, err := json.Marshal(apiErr.Containers); err == nil && len(apiErr.Containers) > 0 {
+			b.WriteString("Ask the owner whether to replace them. If they agree, call deploy_service again with the same arguments and replace_containers set to " +
+				string(confirm) + ". ")
+		} else {
+			b.WriteString("CashPilot did not say which containers, so ask the owner to redeploy " + slug + " from the CashPilot dashboard. ")
+		}
+	case client.CodeDeployTargetChanged:
+		fmt.Fprintf(&b, "A container of %s on this worker is not the one this deploy expected", slug)
+		if id := apiErr.Current; id != "" && id != "none" {
+			b.WriteString(" (now container " + shortID(id) + ")")
+		}
+		b.WriteString(". CashPilot stopped at that container. Copies it reached before it may already run the new settings. Call deploy_service again without replace_containers to see what runs now, then ask the owner again. ")
+	default:
 		return "", false
 	}
-	var b strings.Builder
-	fmt.Fprintf(&b, "%s already has a container on this worker, so this deploy would replace it", slug)
-	if copies := describeCopies(apiErr.Containers); copies != "" {
-		b.WriteString(": " + copies)
-	} else if id := apiErr.Current; id != "" && id != "none" {
-		b.WriteString(": container " + shortID(id))
-	}
-	b.WriteString(". CashPilot asks the owner to confirm before it replaces a running container, so it did not replace it. " +
-		"This tool cannot give that confirmation. Tell the owner to open the CashPilot dashboard and redeploy " + slug +
-		" there: the dashboard shows the containers it will replace and asks them to confirm. " +
-		"The settings sent in this call may not be saved, so the owner should enter them again in the dashboard (env keys, hostname, instances). ")
 	b.WriteString("CashPilot answered: " + apiErr.Detail)
 	return b.String(), true
 }

@@ -44,10 +44,26 @@ func All() []Constructor {
 	}
 }
 
-// IsReadOnly reports whether a tool declares readOnlyHint=true. Read-only
-// mode registers only these.
+// IsReadOnly reports whether a tool declares readOnlyHint=true.
 func IsReadOnly(t mcp.Tool) bool {
 	return t.Annotations.ReadOnlyHint != nil && *t.Annotations.ReadOnlyHint
+}
+
+// readerTools call the only routes CashPilot's read-only key may use: the
+// ones guarded by _require_reader (CashPilot app/deps.py). Every other route
+// answers that key 403 "Read-only token", so read-only mode registers only
+// these.
+var readerTools = map[string]bool{
+	"get_earnings_summary":   true, // GET /api/earnings/summary
+	"get_earnings_breakdown": true, // GET /api/earnings/breakdown
+	"list_deployed_services": true, // GET /api/services/deployed
+	"get_fleet_summary":      true, // GET /api/fleet/summary
+	"get_health_scores":      true, // GET /api/health/scores
+}
+
+// ReaderAllowed reports whether the read-only key may call the tool.
+func ReaderAllowed(t mcp.Tool) bool {
+	return readerTools[t.Name] && IsReadOnly(t)
 }
 
 // hints sets the title and all four annotation hints explicitly, so no tool
