@@ -41,7 +41,7 @@ func NewDeployService(c *client.Client) (mcp.Tool, server.ToolHandlerFunc) {
 			workerParam(),
 			mcp.WithObject("replace_containers",
 				mcp.AdditionalProperties(map[string]any{"type": "string", "pattern": `^(none|[0-9a-f]{12,64})$`}),
-				mcp.Description(`Send only after the owner agreed to replace the running containers. Copy it unchanged from the answer of the previous deploy_service call: copy number to container id, e.g. {"1":"<container id>"}. CashPilot replaces exactly these containers, and refuses if any of them changed.`),
+				mcp.Description(`Send only after the owner agreed to replace the running containers. Copy it unchanged from the answer of the previous deploy_service call: copy number to container id, e.g. {"1":"<container id>"}. A 3.0 worker replaces exactly these containers, and refuses if any of them changed. An older worker cannot check them and could replace a different container.`),
 			),
 		}, hints("Deploy service", false, true, false, true)...)...,
 	)
