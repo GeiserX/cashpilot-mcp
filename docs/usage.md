@@ -2,7 +2,7 @@
 
 ## Tools
 
-Read tools change nothing and are the only ones registered with `CASHPILOT_READ_ONLY=true`. Tools that return records or lists send them as `structuredContent` (with an `outputSchema`) and as JSON text.
+Read tools change nothing. `CASHPILOT_READ_ONLY=true` registers only the five the read-only key allows: `get_earnings_summary`, `get_earnings_breakdown`, `list_deployed_services`, `get_fleet_summary` and `get_health_scores`. CashPilot refuses that key everywhere else. Tools that return records or lists send them as `structuredContent` (with an `outputSchema`) and as JSON text.
 
 | Tool | Parameters | Notes |
 |------|------------|-------|
@@ -37,5 +37,7 @@ Read tools change nothing and are the only ones registered with `CASHPILOT_READ_
 | `cashpilot://workers` | Same as `list_workers` |
 | `cashpilot://health/scores` | Health scores over 7 days |
 | `cashpilot://collector-alerts` | Same as `get_collector_alerts` |
+
+With `CASHPILOT_READ_ONLY=true` only the earnings, deployed services, fleet summary and health scores resources are registered.
 
 Everything is served on stdio or on one Streamable HTTP endpoint (`/mcp`).

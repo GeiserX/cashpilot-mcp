@@ -16,7 +16,7 @@ func init() {
 type CashPilotConfig struct {
 	BaseURL string
 	APIKey  string
-	// ReadOnly hides every tool that changes the fleet (CASHPILOT_READ_ONLY).
+	// ReadOnly registers only what the read-only key may read (CASHPILOT_READ_ONLY).
 	ReadOnly bool
 }
 

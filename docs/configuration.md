@@ -3,8 +3,8 @@
 | Variable              | Default                 | Description |
 |-----------------------|-------------------------|-------------|
 | `CASHPILOT_URL`       | `http://localhost:8080` | CashPilot instance URL (without trailing /) |
-| `CASHPILOT_API_KEY`   | _(required)_            | CashPilot API key. The admin key (`CASHPILOT_ADMIN_API_KEY`) allows every tool. The read-only key (`CASHPILOT_READONLY_API_KEY`) allows the reads except `get_service_logs`; pair it with `CASHPILOT_READ_ONLY=true`. Never the fleet key. |
-| `CASHPILOT_READ_ONLY` | `false`                 | `true` (or `1`) registers only the tools that change nothing: no start, stop, restart, deploy, remove or collection. |
+| `CASHPILOT_API_KEY`   | _(required)_            | CashPilot API key. The admin key (`CASHPILOT_ADMIN_API_KEY`) allows every tool. The read-only key (`CASHPILOT_READONLY_API_KEY`) allows five tools: `get_earnings_summary`, `get_earnings_breakdown`, `list_deployed_services`, `get_fleet_summary` and `get_health_scores`. Pair it with `CASHPILOT_READ_ONLY=true`. Never the fleet key. |
+| `CASHPILOT_READ_ONLY` | `false`                 | `true` (or `1`) registers only the five tools and five resources the read-only key allows. Nothing that changes the fleet is registered. |
 | `TRANSPORT`           | _(empty = HTTP)_        | `stdio` for stdio. The npm package always uses stdio. |
 | `LISTEN_ADDR`         | `127.0.0.1:8081`        | HTTP listen address. The Docker image sets `0.0.0.0:8081` so a published port reaches it. |
 | `MCP_AUTH_TOKEN`      | _(empty)_               | Bearer token for the HTTP endpoint, sent as `Authorization: Bearer <token>`. **Required** when `LISTEN_ADDR` is not loopback. |

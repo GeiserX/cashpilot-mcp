@@ -44,7 +44,7 @@
         },
         {
           "name": "CASHPILOT_READ_ONLY",
-          "description": "Set to true (or 1) to register only the tools that change nothing (no start, stop, restart, deploy, remove or collection)",
+          "description": "Set to true (or 1) to register only the five read tools the read-only key allows; nothing that changes the fleet",
           "isRequired": false,
           "format": "boolean",
           "isSecret": false,
@@ -83,7 +83,7 @@
         },
         {
           "name": "CASHPILOT_READ_ONLY",
-          "description": "Set to true (or 1) to register only the tools that change nothing (no start, stop, restart, deploy, remove or collection)",
+          "description": "Set to true (or 1) to register only the five read tools the read-only key allows; nothing that changes the fleet",
           "isRequired": false,
           "format": "boolean",
           "isSecret": false,
