@@ -31,7 +31,9 @@ A redeploy, or a new number of instances for a running service, replaces its con
 
 1. The agent calls `deploy_service`. CashPilot replaces nothing and lists the containers it would replace. The answer gives the `replace_containers` value to send back, for example `{"1":"0123456789abcdef..."}`.
 2. The agent shows that list to the owner and asks.
-3. If the owner agrees, the agent calls `deploy_service` again with the same arguments plus that `replace_containers`. CashPilot replaces exactly those containers.
+3. If the owner agrees, the agent calls `deploy_service` again with the same arguments plus that `replace_containers`. A 3.0 worker replaces exactly those containers.
+
+A worker older than 3.0 cannot check the IDs. For such a worker, the list holds the containers it last reported, so it could replace a different one. The answer from `deploy_service` says so, and the agent must tell the owner before asking.
 
 If a container changed between the two calls, CashPilot stops at that container. Copies it reached before it may already run the new settings. The agent then starts again at step 1. A service that does not run yet deploys on the first call. CashPilot before 3.0 redeploys on the first call.
 
