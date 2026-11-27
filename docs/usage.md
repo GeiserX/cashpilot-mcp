@@ -20,10 +20,20 @@ Read tools change nothing. `CASHPILOT_READ_ONLY=true` registers only the five th
 | `get_compose` | `slug`, `arch`: amd64, arm64, arm | docker-compose.yml text |
 | `trigger_collection` | none | Runs in the background; read earnings again a minute later |
 | `start_service`, `restart_service`, `stop_service` | `slug`, `worker_id`, `instance` 1-10 | `stop_service` is marked destructive: the service stops earning |
-| `deploy_service` | `slug`, `env` (object of strings), `hostname`, `instances` 1-10, `worker_id` | Deploys; can take minutes while the image is pulled. CashPilot 3.0 and later replace an existing container only after the owner confirms in the dashboard, so a redeploy from here reports what runs and stops |
+| `deploy_service` | `slug`, `env` (object of strings), `hostname`, `instances` 1-10, `worker_id`, `replace_containers` | Deploys; can take minutes while the image is pulled. See [Redeploy a running service](#redeploy-a-running-service) |
 | `remove_service` | `slug`, `worker_id` | Deletes the containers and keeps the volumes |
 
 `worker_id` is needed whenever more than one worker is online; CashPilot picks the worker itself when only one is. Each mutating call is logged to stderr (tool, slug, worker, instance; never env values).
+
+## Redeploy a running service
+
+A redeploy, or a new number of instances for a running service, replaces its containers. CashPilot 3.0 and later do that only after the owner agrees:
+
+1. The agent calls `deploy_service`. CashPilot replaces nothing and lists the containers it would replace. The answer ends with the `replace_containers` value to send back, for example `{"1":"0123456789abcdef..."}`.
+2. The agent shows that list to the owner and asks.
+3. If the owner agrees, the agent calls `deploy_service` again with the same arguments plus that `replace_containers`. CashPilot replaces exactly those containers.
+
+If a container changed between the two calls, CashPilot refuses and replaces nothing. The agent then starts again at step 1. A service that does not run yet deploys on the first call. CashPilot before 3.0 redeploys on the first call.
 
 ## Resources
 

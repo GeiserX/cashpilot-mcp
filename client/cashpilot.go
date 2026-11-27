@@ -249,6 +249,26 @@ func detailOf(body []byte, e *APIError) {
 	}
 }
 
+// ErrInvalidContainers is returned before any request is sent for a
+// replacement map that is not one CashPilot sent.
+var ErrInvalidContainers = fmt.Errorf("replace_containers must be the map from CashPilot's refusal, copied unchanged: "+
+	"copy number (\"1\", or \"p3\" for a proxied copy) to container id or \"none\", at most %d entries", maxReportedCopies)
+
+// ValidateContainers reports whether m has the shape of the
+// expected_containers map CashPilot sends with confirm_deploy_targets, so it
+// can be sent back as the owner's confirmation.
+func ValidateContainers(m map[string]string) error {
+	if len(m) == 0 || len(m) > maxReportedCopies {
+		return ErrInvalidContainers
+	}
+	for k, id := range m {
+		if !copyKeyPattern.MatchString(k) || !containerIDPattern.MatchString(id) {
+			return ErrInvalidContainers
+		}
+	}
+	return nil
+}
+
 // containersOf keeps the copy-to-container pairs of expected_containers that
 // look like CashPilot's own, at most maxReportedCopies of them.
 func containersOf(raw json.RawMessage) map[string]string {
