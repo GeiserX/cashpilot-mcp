@@ -105,10 +105,19 @@ func (e *APIError) Error() string {
 	switch {
 	case e.Status == http.StatusUnauthorized:
 		msg += ". CASHPILOT_API_KEY is missing or wrong."
+	case e.Status == http.StatusForbidden && e.Detail == "Read-only token":
+		// app/deps.py _require_auth_api; the allowlist is _require_reader's callers.
+		msg += ". The read-only key allows only get_earnings_summary, get_earnings_breakdown, get_fleet_summary, get_health_scores and list_deployed_services. " +
+			"Use the admin key for this call, or set CASHPILOT_READ_ONLY=true to list only the tools this key allows."
+	case e.Status == http.StatusForbidden && strings.Contains(e.Detail, "fleet key"):
+		msg += ". Use the admin key or the read-only key, never the fleet key."
 	case e.Status == http.StatusForbidden:
-		msg += ". The API key's role does not allow this call: a read-only key cannot change services or read logs."
+		msg += ". This API key's role does not allow this call."
 	case e.Status == http.StatusBadRequest && strings.Contains(e.Detail, "worker_id"):
 		msg += ". Pass worker_id; list_workers shows the ids."
+	case e.Status == http.StatusNotFound && strings.Contains(strings.ToLower(e.Detail), "worker"):
+		// "Worker not found", "Unknown worker 7", "No such worker, ...".
+		msg += ". Check worker_id with list_workers."
 	case e.Status == http.StatusNotFound:
 		msg += ". Check the slug with list_deployed_services or list_available_services."
 	}
