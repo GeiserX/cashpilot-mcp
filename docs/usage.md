@@ -16,7 +16,7 @@ Read tools change nothing. `CASHPILOT_READ_ONLY=true` registers only the five th
 | `list_workers` | none | Worker ids for `worker_id` |
 | `get_health_scores` | `days` 1-90 (default 7) | Score 0-100 per service |
 | `get_collector_alerts` | none | Errors from the last collection run |
-| `get_service_logs` | `slug`, `lines` 1-1000 (default 50), `worker_id`, `instance` | Third-party output, fenced as untrusted. Needs the admin key |
+| `get_service_logs` | `slug`, `lines` 1-1000 (default 50), `worker_id`, `instance` | Third-party output, fenced as untrusted |
 | `get_compose` | `slug`, `arch`: amd64, arm64, arm | docker-compose.yml text |
 | `trigger_collection` | none | Runs in the background; read earnings again a minute later |
 | `start_service`, `restart_service`, `stop_service` | `slug`, `worker_id`, `instance` 1-10 | `stop_service` is marked destructive: the service stops earning |
